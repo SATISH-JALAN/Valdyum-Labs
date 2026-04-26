@@ -1,0 +1,49 @@
+import createMDX from '@next/mdx';
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  pageExtensions: ['ts', 'tsx', 'md', 'mdx'],
+
+  // Enable standalone output so the Docker image only ships what is needed.
+  output: 'standalone',
+
+  // Prevent Next.js from bundling native Node.js modules (stellar-sdk uses
+  // sodium-native which is a native addon). This keeps them as external
+  // Node.js requires inside serverless functions instead of being inlined
+  // by webpack, which would fail on Vercel/Edge environments.
+  serverExternalPackages: ['stellar-sdk', '@stellar/stellar-base', 'sodium-native'],
+
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        stream: false,
+        path: false,
+        os: false,
+      };
+    }
+    return config;
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/:path*`,
+      },
+    ];
+  },
+};
+
+const withMDX = createMDX({
+  options: {
+    remarkPlugins: [],
+    rehypePlugins: [],
+  },
+});
+
+export default withMDX(nextConfig);

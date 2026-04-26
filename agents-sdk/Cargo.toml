@@ -13,10 +13,10 @@ resolver = "2"
 [workspace.package]
 version      = "0.1.0"
 edition      = "2021"
-authors      = ["Xylem AgentForge SDK"]
+authors      = ["Xylem Valdyum SDK"]
 license      = "MIT"
 repository   = "https://github.com/mesayanroy/0x402-pubsub"
-description  = "Professional Rust agent templates for the Xylem / AgentForge platform"
+description  = "Professional Rust agent templates for the Xylem / Valdyum platform"
 
 # ── Shared release profile — optimised for binary size + speed ───────────────
 [profile.release]

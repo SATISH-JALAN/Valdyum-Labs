@@ -1,6 +1,6 @@
-# AgentForge CLI
+# Valdyum CLI
 
-The AgentForge CLI provides full terminal access to all platform features.
+The Valdyum CLI provides full terminal access to all platform features.
 
 ## Installation
 
@@ -16,23 +16,23 @@ pnpm build && npm install -g .
 ### 1. Initialize a project
 
 ```bash
-agentforge init my-agent
+valdyum init my-agent
 cd my-agent
 cp .env.example .env
 ```
 
-`agentforge init` creates the scaffold for agents, tasks, workflows, dashboard config, and docs.
+`valdyum init` creates the scaffold for agents, tasks, workflows, dashboard config, and docs.
 
 ### 2. Inspect agents
 
 ```bash
-agentforge agents list
+valdyum agents list
 ```
 
 ### 3. Run an agent with payment handling
 
 ```bash
-agentforge agents run <agentId> \
+valdyum agents run <agentId> \
   --input "Summarize today's market tape" \
   --secret $STELLAR_AGENT_SECRET
 ```
@@ -42,7 +42,7 @@ If the agent returns a 402 challenge, the CLI signs and submits the Stellar paym
 ### 4. Watch the live dashboard
 
 ```bash
-agentforge dash --interval 3000
+valdyum dash --interval 3000
 ```
 
 The dashboard shows a terminal Polymarket-style view with prices, request stats, earnings, and recent activity.
@@ -50,7 +50,7 @@ The dashboard shows a terminal Polymarket-style view with prices, request stats,
 ### 5. Route agent-to-agent work
 
 ```bash
-agentforge a2a call <fromAgentId> <toAgentId> \
+valdyum a2a call <fromAgentId> <toAgentId> \
   --input "Delegate: analyze the liquidity report" \
   --secret $STELLAR_AGENT_SECRET
 ```
@@ -58,16 +58,16 @@ agentforge a2a call <fromAgentId> <toAgentId> \
 ### 6. Inspect payments
 
 ```bash
-agentforge tx status <txHash>
-agentforge tx inspect <txHash>
+valdyum tx status <txHash>
+valdyum tx inspect <txHash>
 ```
 
 ## Commands
 
-### `agentforge init [projectName]`
-Creates a new AgentForge project scaffold with folders and starter files for agents, tasks, workflows, dashboard config, and CLI docs:
+### `valdyum init [projectName]`
+Creates a new Valdyum project scaffold with folders and starter files for agents, tasks, workflows, dashboard config, and CLI docs:
 ```bash
-agentforge init my-trading-agent
+valdyum init my-trading-agent
 ```
 Creates:
 - `my-trading-agent/agents/templates/` — starter agent templates
@@ -78,9 +78,9 @@ Creates:
 - `my-trading-agent/config/dashboard.json` — terminal dashboard config
 - `my-trading-agent/docs/CLI_GUIDE.md` — local CLI usage guide
 - `my-trading-agent/.env.example` — environment template
-- `my-trading-agent/.agentforge/dashboard.json` — terminal dashboard metadata
+- `my-trading-agent/.valdyum/dashboard.json` — terminal dashboard metadata
 
-### `agentforge dash`
+### `valdyum dash`
 Opens the live terminal polymarket dashboard with:
 - Real-time crypto market prices in green, yellow, red, blue, and white
 - Active agent list with earnings
@@ -88,17 +88,17 @@ Opens the live terminal polymarket dashboard with:
 - Simulated PnL tracking and request rates
 
 ```bash
-agentforge dash --interval 5000  # refresh every 5s
+valdyum dash --interval 5000  # refresh every 5s
 ```
 
-### `agentforge agents list`
+### `valdyum agents list`
 Lists all available agents with status, price, and stats.
 
-### `agentforge agents run <agentId>`
+### `valdyum agents run <agentId>`
 Runs an agent with optional 0x402 Stellar payment.
 
 ```bash
-agentforge agents run mev_bot --input "Find MEV opportunities" --secret $STELLAR_SECRET
+valdyum agents run mev_bot --input "Find MEV opportunities" --secret $STELLAR_SECRET
 ```
 
 If the requested agent is paid, the CLI will:
@@ -107,24 +107,24 @@ If the requested agent is paid, the CLI will:
 3. Submit to Horizon.
 4. Retry the agent call with payment proof headers.
 
-### `agentforge a2a call <fromAgentId> <toAgentId>`
+### `valdyum a2a call <fromAgentId> <toAgentId>`
 Routes a request between two agents (multi-agent compose).
 
 ```bash
-agentforge a2a call mev_bot trading_bot --input "Find and execute best opportunity" --secret $STELLAR_SECRET
+valdyum a2a call mev_bot trading_bot --input "Find and execute best opportunity" --secret $STELLAR_SECRET
 ```
 
-### `agentforge tx status <txHash>`
+### `valdyum tx status <txHash>`
 Checks the status of a Stellar transaction.
 
-### `agentforge tx inspect <txHash>`
+### `valdyum tx inspect <txHash>`
 Shows full transaction details.
 
 ## Multi-Agent (A2A) Workflow
 
 ```bash
 # Agent 1 analyzes → Agent 2 executes
-agentforge a2a call arbitrage_tracker trading_bot \
+valdyum a2a call arbitrage_tracker trading_bot \
   --input "Find triangular arbitrage for XLM/USDC/BTC then execute" \
   --secret $STELLAR_SECRET
 ```
@@ -166,7 +166,7 @@ After a successful claim, use the Freighter token add prompt in the faucet UI if
 
 | Variable | Description |
 |----------|-------------|
-| `AGENTFORGE_API_URL` | AgentForge server URL (default: http://localhost:3000) |
+| `VALDYUM_API_URL` | Valdyum server URL (default: http://localhost:3000) |
 | `STELLAR_AGENT_SECRET` | Stellar secret key for payments |
 | `QSTASH_TOKEN` | Upstash QStash token |
 | `ABLY_API_KEY` | Ably server API key |

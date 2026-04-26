@@ -1,9 +1,9 @@
-# AgentForge — An Web 3 Agentic AI Infrastructure On-chain
+# Valdyum — An Web 3 Agentic AI Infrastructure On-chain
 Where user can Ideate , build , own , monitize web3 agents via deploying agent Onchain.
 
 [![CI / CD](https://github.com/mesayanroy/0x402-pubsub/actions/workflows/ci.yml/badge.svg)](https://github.com/mesayanroy/0x402-pubsub/actions/workflows/ci.yml)
 
-AgentForge is solving Automation On-chain. An Agentic AI Infrastructure where user can ideate, build, own , monitize via deploying agent Onchain . Become the Righter owner of your agents credibility & ownership , Monetization . Along with Developers toolkit to build and use thier agents in thier own dapp/project with better deployment environment locally with CLI and executing AI agents with verifiable payment rails on Stellar.
+Valdyum is solving Automation On-chain. An Agentic AI Infrastructure where user can ideate, build, own , monitize via deploying agent Onchain . Become the Righter owner of your agents credibility & ownership , Monetization . Along with Developers toolkit to build and use thier agents in thier own dapp/project with better deployment environment locally with CLI and executing AI agents with verifiable payment rails on Stellar.
 
 https://www.loom.com/share/f4e989d847ca4beb9b104e4a5d4c8ae4
 
@@ -67,7 +67,7 @@ AI agents are easy to build but hard to monetize safely across open networks. Tr
 - No shared payment standard between autonomous clients
 - No transparent, verifiable evidence that value moved
 
-AgentForge addresses this by pairing 0x402 style payment negotiation with Stellar transactions and on-chain policy enforcement.
+Valdyum addresses this by pairing 0x402 style payment negotiation with Stellar transactions and on-chain policy enforcement.
 
 ## Why Stellar (and Soroban)
 
@@ -247,6 +247,6 @@ This pipeline ensures code quality, type safety, production build integrity, and
 
 ## Project Vision
 
-AgentForge demonstrates that autonomous software can be monetized transparently when identity, payment, and execution are composed as one protocol surface.
+Valdyum demonstrates that autonomous software can be monetized transparently when identity, payment, and execution are composed as one protocol surface.
 
 By building on Stellar, the project converts abstract AI usage into verifiable economic events that users, builders, and integrators can trust.
