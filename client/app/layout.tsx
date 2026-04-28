@@ -17,13 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body className="font-sans antialiased bg-[#050508] text-white">
+      <body className="antialiased bg-[#FAFBFC] text-[#0A0E27]">
         <Navbar />
-        <main className="pt-16">
+        <main className="pt-[68px]">
           <AppShell>{children}</AppShell>
         </main>
         <AblyNotifications />

@@ -2,28 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Google Fonts ───────────────────────────────────────────────────────────── */
+/* Loaded via browser; production CDN is available even if build sandbox is not */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap');
+
 /* ── Design tokens ──────────────────────────────────────────────────────────── */
 :root {
   /* Fonts */
-  --font-syne: 'Syne', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  --font-editorial: 'Cormorant Garamond', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
-  /* Brand palette */
-  --color-teal:       #00FFE5;
-  --color-teal-dim:   rgba(0, 255, 229, 0.08);
-  --color-teal-glow:  rgba(0, 255, 229, 0.18);
-  --color-violet:     #7b61ff;
-  --color-violet-dim: rgba(123, 97, 255, 0.08);
-  --color-amber:      #f59e0b;
-  --color-green:      #4ade80;
-  --color-surface:    #0b0b10;
-  --color-bg:         #050508;
+  /* Light luxury palette */
+  --color-bg:         #FAFBFC;
+  --color-surface:    #F5F6F8;
+  --color-surface-2:  #EEF0F5;
+  --color-text:       #0A0E27;
+  --color-text-muted: #475569;
+  --color-border:     #E2E8F0;
+  --color-indigo:     #4F46E5;
+  --color-indigo-dim: rgba(79, 70, 229, 0.08);
+  --color-bronze:     #B45309;
+  --color-bronze-dim: rgba(180, 83, 9, 0.1);
 
   /* Spacing */
-  --header-h: 64px;
+  --header-h: 68px;
+  --section-gap: 120px;
+  --content-max: 1200px;
 }
 
-/* ── Base ───────────────────────────────────────────────────────────────────── */
+/* ── Base reset ─────────────────────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -31,92 +39,97 @@
 }
 
 html {
-  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 body {
   background-color: var(--color-bg);
-  color: #ffffff;
-  font-family: var(--font-syne);
+  color: var(--color-text);
+  font-family: var(--font-sans);
   overflow-x: hidden;
 }
 
-/* ── Utility font helpers ────────────────────────────────────────────────────── */
-.font-syne {
-  font-family: var(--font-syne);
+/* ── Typography helpers ──────────────────────────────────────────────────────── */
+.font-editorial {
+  font-family: var(--font-editorial);
+}
+
+.font-sans-body {
+  font-family: var(--font-sans);
 }
 
 .font-mono {
   font-family: var(--font-mono) !important;
 }
 
-/* ── Custom scrollbar ────────────────────────────────────────────────────────── */
+/* ── Custom scrollbar (light) ────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #08080e;
+  background: var(--color-surface);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 229, 0.18);
+  background: var(--color-border);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 229, 0.35);
+  background: #cbd5e1;
 }
 
-/* ── Grid background texture ─────────────────────────────────────────────────── */
-.grid-bg {
-  background-image:
-    linear-gradient(rgba(0, 255, 229, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 229, 0.03) 1px, transparent 1px);
-  background-size: 52px 52px;
+/* ── Section label (uppercase tracking) ─────────────────────────────────────── */
+.section-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-bronze);
 }
 
-/* ── Glassmorphism card ───────────────────────────────────────────────────────── */
-.glass-card {
-  background:   rgba(255, 255, 255, 0.025);
-  backdrop-filter: blur(18px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.4) inset,
-    0 24px 48px -12px rgba(0, 0, 0, 0.5);
+/* ── Bronze underline links ──────────────────────────────────────────────────── */
+.link-bronze {
+  position: relative;
+  color: var(--color-bronze);
+  text-decoration: none;
+}
+.link-bronze::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--color-bronze);
+  transition: width 0.3s ease;
+}
+.link-bronze:hover::after {
+  width: 100%;
 }
 
-.glass-card:hover {
-  border-color: rgba(0, 255, 229, 0.12);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.4) inset,
-    0 24px 64px -12px rgba(0, 0, 0, 0.6),
-    0 0 40px -10px rgba(0, 255, 229, 0.08);
+/* ── Indigo underline links ──────────────────────────────────────────────────── */
+.link-indigo {
+  position: relative;
+  color: var(--color-indigo);
+  text-decoration: none;
+}
+.link-indigo::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--color-indigo);
+  transition: width 0.3s ease;
+}
+.link-indigo:hover::after {
+  width: 100%;
 }
 
-/* ── Glow utilities ──────────────────────────────────────────────────────────── */
-.glow-teal {
-  box-shadow: 0 0 32px -4px rgba(0, 255, 229, 0.35);
-}
-
-.glow-violet {
-  box-shadow: 0 0 32px -4px rgba(123, 97, 255, 0.35);
-}
-
-.text-glow-teal {
-  text-shadow: 0 0 24px rgba(0, 255, 229, 0.6);
-}
-
-/* ── Gradient text helpers ────────────────────────────────────────────────────── */
-.gradient-text-teal {
-  background: linear-gradient(135deg, #00FFE5, #7b61ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── Shimmer loading skeleton ──────────────────────────────────────────────── */
+/* ── Shimmer skeleton ──────────────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position: 400px 0; }
@@ -125,34 +138,43 @@ body {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.03) 25%,
-    rgba(255,255,255,0.07) 50%,
-    rgba(255,255,255,0.03) 75%
+    var(--color-surface) 25%,
+    var(--color-surface-2) 50%,
+    var(--color-surface) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* ── Status indicator ──────────────────────────────────────────────────────── */
+/* ── Status live dot ──────────────────────────────────────────────────────── */
 .status-live::before {
   content: '';
   display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-teal);
+  background: #22c55e;
   margin-right: 6px;
-  box-shadow: 0 0 6px var(--color-teal);
-  animation: pulse-ring 1.4s ease-out infinite;
+  animation: pulse-green 1.4s ease-out infinite;
 }
 
-@keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 rgba(0,255,229,0.6); }
-  70%  { box-shadow: 0 0 0 6px rgba(0,255,229,0); }
-  100% { box-shadow: 0 0 0 0 rgba(0,255,229,0); }
+@keyframes pulse-green {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
 }
 
-/* ── Three.js canvas sizing ───────────────────────────────────────────────── */
+/* ── GSAP reveal helpers ──────────────────────────────────────────────────── */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(32px);
+}
+
+.reveal-fade {
+  opacity: 0;
+}
+
+/* ── Canvas sizing ────────────────────────────────────────────────────────── */
 canvas {
   display: block;
   outline: none;
@@ -160,7 +182,45 @@ canvas {
 
 /* ── Focus visible ────────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--color-teal);
+  outline: 2px solid var(--color-indigo);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ── FAQ accordion ────────────────────────────────────────────────────────── */
+.faq-answer {
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+}
+
+/* ── Metric card hover ────────────────────────────────────────────────────── */
+.metric-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -8px rgba(10, 14, 39, 0.12);
+}
+
+/* ── Agent card hover ─────────────────────────────────────────────────────── */
+.agent-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.agent-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px -8px rgba(10, 14, 39, 0.1);
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-up,
+  .reveal-fade {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .metric-card,
+  .agent-card {
+    transition: none !important;
+  }
 }
