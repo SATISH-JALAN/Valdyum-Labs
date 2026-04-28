@@ -1,8 +1,8 @@
-# AgentForge Architecture Blueprint
+# Valdyum Architecture Blueprint
 
 ## Executive Summary
 
-AgentForge is a protocol-driven AI commerce stack built on Stellar. It turns AI execution into verifiable economic activity by binding each paid interaction to a wallet signature and on-chain payment evidence.
+Valdyum is a protocol-driven AI commerce stack built on Stellar. It turns AI execution into verifiable economic activity by binding each paid interaction to a wallet signature and on-chain payment evidence.
 
 The platform solves three hard problems at once:
 - Agent monetization without centralized billing trust assumptions
@@ -13,7 +13,7 @@ The platform solves three hard problems at once:
 
 Modern AI agent platforms usually rely on API keys, opaque usage logs, and delayed settlement. That model creates friction for open marketplaces because payment, execution, and attribution are disconnected.
 
-AgentForge addresses this with a payment-first execution model:
+Valdyum addresses this with a payment-first execution model:
 - A request that requires payment returns a structured challenge
 - The caller signs and submits a Stellar transaction
 - The backend verifies payment proof before execution

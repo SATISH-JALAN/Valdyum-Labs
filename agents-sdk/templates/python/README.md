@@ -1,6 +1,6 @@
-# AgentForge Python Agent Templates (LangGraph)
+# Valdyum Python Agent Templates (LangGraph)
 
-These templates provide LangGraph-powered agent workflows for all 6 AgentForge agent types.
+These templates provide LangGraph-powered agent workflows for all 6 Valdyum agent types.
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ pip install -r requirements.txt
 
 Set environment variables in `.env`:
 ```
-AGENTFORGE_API_URL=http://localhost:3000
+VALDYUM_API_URL=http://localhost:3000
 OPENAI_API_KEY=your_key
 ANTHROPIC_API_KEY=your_key
 STELLAR_AGENT_SECRET=your_secret
@@ -53,6 +53,6 @@ When an agent requires payment:
 ## CLI Integration
 
 ```bash
-agentforge agents run mev_bot --input "scan for opportunities" --secret $STELLAR_SECRET
-agentforge a2a call mev_bot trading_bot --input "find and execute MEV" --secret $STELLAR_SECRET
+valdyum agents run mev_bot --input "scan for opportunities" --secret $STELLAR_SECRET
+valdyum a2a call mev_bot trading_bot --input "find and execute MEV" --secret $STELLAR_SECRET
 ```

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║          AgentForge Soroban Contract Deployment Script                     ║
+# ║          Valdyum Soroban Contract Deployment Script                     ║
 # ║                                                                            ║
 # ║  Professional deployment of AgentValidator & AgentRegistry to Stellar     ║
 # ║  Testnet. Builds, deploys, initializes, and stores contract IDs in       ║
@@ -269,7 +269,7 @@ update_env_local() {
 main() {
   echo -e "${BLUE}"
   echo "╔════════════════════════════════════════════════════════════════════════════╗"
-  echo "║        AgentForge Soroban Deployment Script                                ║"
+  echo "║        Valdyum Soroban Deployment Script                                ║"
   echo "║                                                                            ║"
   echo "║  Deploying AgentValidator & AgentRegistry to Stellar Testnet              ║"
   echo "╚════════════════════════════════════════════════════════════════════════════╝"
