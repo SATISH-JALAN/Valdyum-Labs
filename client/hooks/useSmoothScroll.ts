@@ -12,6 +12,7 @@ export function useSmoothScroll() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     let lenis: import('lenis').default | null = null;
+    let gsapTickerCb: ((time: number) => void) | null = null;
 
     async function init() {
       const [{ default: Lenis }, { gsap }, { ScrollTrigger }] = await Promise.all([
@@ -31,10 +32,10 @@ export function useSmoothScroll() {
       // Sync Lenis with GSAP ScrollTrigger
       lenis.on('scroll', ScrollTrigger.update);
 
-      gsap.ticker.add((time) => {
+      gsapTickerCb = (time: number) => {
         lenis?.raf(time * 1000);
-      });
-
+      };
+      gsap.ticker.add(gsapTickerCb);
       gsap.ticker.lagSmoothing(0);
     }
 
@@ -42,7 +43,11 @@ export function useSmoothScroll() {
 
     return () => {
       lenis?.destroy();
-      // Remove gsap ticker add — cleanup handled by Lenis destroy
+      if (gsapTickerCb) {
+        import('gsap').then(({ gsap }) => {
+          if (gsapTickerCb) gsap.ticker.remove(gsapTickerCb);
+        });
+      }
     };
   }, []);
 }
