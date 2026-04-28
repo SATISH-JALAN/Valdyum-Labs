@@ -167,14 +167,14 @@ export default function WalletConnect() {
   if (address) {
     return (
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-[rgba(0,255,229,0.2)] bg-[rgba(0,255,229,0.04)]">
-          <div className="w-2 h-2 rounded-full bg-[#00FFE5] animate-pulse" />
-          <span className="font-mono text-xs text-[#00FFE5]">{truncateAddress(address)}</span>
-          <span className="font-mono text-xs text-gray-400">{balance} XLM</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-[#F5F6F8]">
+          <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
+          <span className="font-mono text-xs text-[#0A0E27]">{truncateAddress(address)}</span>
+          <span className="font-mono text-xs text-[#475569]">{balance} XLM</span>
         </div>
         <button
           onClick={disconnect}
-          className="text-xs text-gray-500 hover:text-red-400 transition-colors font-mono"
+          className="text-xs text-[#94a3b8] hover:text-[#dc2626] transition-colors"
         >
           Disconnect
         </button>
@@ -187,7 +187,7 @@ export default function WalletConnect() {
       <button
         onClick={() => { setShowModal(true); setWalletError(null); }}
         disabled={connecting}
-        className="px-4 py-1.5 text-sm font-mono border border-[#00FFE5] text-[#00FFE5] rounded hover:bg-[#00FFE5] hover:text-black transition-all duration-200 disabled:opacity-50"
+        className="px-5 py-2 text-sm font-medium bg-[#4F46E5] text-white rounded-xl hover:bg-[#4338CA] transition-colors disabled:opacity-50"
       >
         {connecting ? 'Connecting...' : 'Connect Wallet'}
       </button>
@@ -196,28 +196,28 @@ export default function WalletConnect() {
         <div className="fixed inset-0 z-[120] flex items-end justify-center px-4 pb-6 pt-6 sm:items-start sm:pt-24">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           />
 
           {/* Modal */}
-          <div className="relative z-10 w-full max-w-sm max-h-[72vh] overflow-y-auto rounded-2xl border border-[rgba(0,255,229,0.2)] bg-[#0a0a10] p-6 shadow-2xl sm:max-h-[70vh]">
+          <div className="relative z-10 w-full max-w-sm max-h-[72vh] overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-[0_24px_64px_-12px_rgba(10,14,39,0.18)] sm:max-h-[70vh]">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-syne text-lg font-bold text-white">Connect a Wallet</h2>
+              <h2 className="font-editorial text-lg font-bold text-[#0A0E27]">Connect a Wallet</h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-white transition-colors font-mono text-lg leading-none"
+                className="text-[#94a3b8] hover:text-[#0A0E27] transition-colors text-lg leading-none"
               >
                 ✕
               </button>
             </div>
 
-            <p className="font-mono text-xs text-gray-500 mb-4">
+            <p className="text-xs text-[#475569] mb-4">
               Select a Stellar wallet to connect to Valdyum.
             </p>
 
             {walletError && (
-              <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-800 text-red-400 font-mono text-xs">
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs">
                 {walletError}
               </div>
             )}
@@ -228,19 +228,19 @@ export default function WalletConnect() {
                   key={wallet.id}
                   onClick={() => handleWalletSelect(wallet.id)}
                   disabled={connecting}
-                  className="w-full flex items-center gap-4 p-3.5 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(0,255,229,0.3)] hover:bg-[rgba(0,255,229,0.04)] transition-all text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-4 p-3.5 rounded-xl border border-[#E2E8F0] bg-[#F5F6F8] hover:border-[#4F46E5] hover:bg-[rgba(79,70,229,0.04)] transition-all text-left disabled:opacity-50"
                 >
                   <span className="text-2xl leading-none">{wallet.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-syne font-bold text-white text-sm">{wallet.name}</div>
-                    <div className="font-mono text-xs text-gray-500 truncate">{wallet.description}</div>
+                    <div className="font-semibold text-[#0A0E27] text-sm">{wallet.name}</div>
+                    <div className="text-xs text-[#475569] truncate">{wallet.description}</div>
                   </div>
-                  <span className="text-gray-600 font-mono text-xs shrink-0">→</span>
+                  <span className="text-[#94a3b8] text-xs shrink-0">→</span>
                 </button>
               ))}
             </div>
 
-            <p className="mt-4 font-mono text-[10px] text-gray-600 text-center">
+            <p className="mt-4 text-[10px] text-[#94a3b8] text-center">
               Connecting will request access to your public key only. No funds are moved.
             </p>
           </div>

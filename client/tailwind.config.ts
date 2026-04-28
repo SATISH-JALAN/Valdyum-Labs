@@ -9,16 +9,24 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        syne: ["var(--font-syne)", "sans-serif"],
+        editorial: ["var(--font-editorial)", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
       colors: {
-        cyan: {
-          DEFAULT: "#00FFE5",
+        brand: {
+          bg:       "#FAFBFC",
+          surface:  "#F5F6F8",
+          surface2: "#EEF0F5",
+          text:     "#0A0E27",
+          muted:    "#475569",
+          border:   "#E2E8F0",
+          indigo:   "#4F46E5",
+          bronze:   "#B45309",
         },
-        amber: {
-          DEFAULT: "#FFB800",
-        },
+      },
+      maxWidth: {
+        content: "1200px",
       },
     },
   },
