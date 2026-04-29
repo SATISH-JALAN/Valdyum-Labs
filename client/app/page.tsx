@@ -107,50 +107,98 @@ const fadeUp = {
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#050508] overflow-x-hidden">
+    <div className="min-h-screen bg-[#ffffff] text-[#111111] overflow-x-hidden">
       <HeroSection />
 
-      {/* ── PROTOCOL ARCHITECTURE ────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 py-24">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-14"
-        >
-          <span className="font-mono text-[11px] text-[#00FFE5] tracking-[0.25em] uppercase">
-            Core Architecture
-          </span>
-          <h2 className="font-syne text-4xl md:text-5xl font-bold text-white mt-3">
-            0x402 × QStash × Stellar
-          </h2>
-          <p className="text-white/40 font-mono text-sm mt-4 max-w-xl mx-auto">
-            The complete payment-to-execution pipeline powering every agent interaction
-          </p>
-        </motion.div>
+      {/* ── CORE ARCHITECTURE (PRISM-STYLE) ────────────────────────────── */}
+      <section className="w-full bg-[#fafafa] min-h-screen flex flex-col justify-center border-t border-black/5 relative z-10">
+        <div className="max-w-[1400px] mx-auto w-full px-6 lg:px-12 py-12">
+          
+          {/* Top Header Section */}
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8">
+            <div>
+              <div className="flex items-center gap-4 mb-4">
+                <span className="h-[1px] w-8 bg-black/30" />
+                <span className="font-sans text-sm font-medium text-black/50">
+                  Core Architecture
+                </span>
+              </div>
+              
+              <h2 className="font-sans text-5xl md:text-7xl lg:text-[5.5rem] font-medium tracking-tight text-[#111111] leading-[0.95]">
+                0x402 × QStash<br/>
+                <span className="text-black/30">× Stellar.</span>
+              </h2>
+            </div>
 
-        {/* Flow diagram */}
-        <div className="mb-16">
-          <ProtocolFlow />
-        </div>
+            <div className="lg:max-w-md pb-2">
+              <p className="text-lg font-medium text-black/50 leading-relaxed">
+                The complete payment-to-execution pipeline powering every agent interaction. 
+                Gasless UX, fully verified, all on-chain.
+              </p>
+            </div>
+          </div>
 
-        {/* Feature cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {PROTOCOL_FEATURES.map((feat, i) => (
-            <motion.div
-              key={feat.title}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="group p-5 rounded-2xl border border-white/[0.06] bg-[rgba(255,255,255,0.02)] hover:border-white/[0.12] hover:bg-[rgba(255,255,255,0.04)] transition-all duration-300"
+          {/* The Huge Card Section */}
+          <div className="relative border border-black/10 flex flex-col lg:flex-row overflow-hidden bg-white rounded-3xl">
+            
+            {/* Left Text Content */}
+            <div className="p-8 md:p-12 flex flex-col lg:w-[50%] relative z-10 bg-white/80 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none">
+              <div className="font-mono text-[11px] text-black/30 mb-6 tracking-[0.2em]">01</div>
+              
+              <h3 className="font-sans text-3xl md:text-4xl font-medium mb-4 tracking-tight text-[#111111]">
+                Execution Pipeline
+              </h3>
+              
+              <p className="font-sans text-base text-black/60 mb-8 max-w-md leading-relaxed">
+                Five core components orchestrate the lifecycle of an agent. From the initial 
+                HTTP 402 challenge, to Stellar payment verification, to QStash event broadcasting.
+              </p>
+
+              {/* The 5 Steps */}
+              <div className="flex flex-col gap-3 mb-10">
+                {[
+                  { title: 'Agent SDK', desc: 'Rust / 0x402 client' },
+                  { title: '0x402 Protocol', desc: 'HTTP 402 → Stellar TX' },
+                  { title: 'Platform API', desc: 'Next.js · Soroban verify' },
+                  { title: 'QStash Pub-Sub', desc: 'Upstash · 8 topics' },
+                  { title: 'Dashboard', desc: 'Real-time · Ably' },
+                ].map((step, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <div className="w-1.5 h-1.5 rounded-full bg-black/20" />
+                    <span className="font-sans font-semibold text-[#111111] text-sm md:text-[15px]">{step.title}</span>
+                    <span className="font-sans text-sm text-black/40">—</span>
+                    <span className="font-sans text-sm md:text-[15px] text-black/50">{step.desc}</span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Bottom Stat */}
+              <div className="mt-auto">
+                <div className="text-4xl md:text-5xl font-sans font-medium mb-2 text-[#111111]">
+                  5
+                </div>
+                <div className="font-mono text-[10px] text-black/40 uppercase tracking-[0.2em]">
+                  core pipeline stages
+                </div>
+              </div>
+            </div>
+
+            {/* Right Image Container */}
+            <div 
+              className="absolute top-0 right-0 bottom-0 w-full lg:w-[65%] pointer-events-none"
+              style={{ 
+                maskImage: 'linear-gradient(to right, transparent 0%, black 35%)', 
+                WebkitMaskImage: '-webkit-linear-gradient(left, transparent 0%, black 35%)' 
+              }}
             >
-              <span className="text-3xl">{feat.icon}</span>
-              <h3 className={`font-mono text-sm font-bold mt-3 ${feat.color}`}>{feat.title}</h3>
-              <p className="text-white/40 text-xs leading-relaxed mt-2">{feat.desc}</p>
-            </motion.div>
-          ))}
+              <img 
+                src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2000&auto=format&fit=crop" 
+                alt="Architecture Concept"
+                className="w-full h-full object-cover object-left opacity-90 mix-blend-multiply"
+              />
+            </div>
+            
+          </div>
         </div>
       </section>
 
