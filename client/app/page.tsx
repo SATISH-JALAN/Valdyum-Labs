@@ -1,23 +1,12 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import LiveFeed from '@/components/LiveFeed';
 import ProtocolFlow from '@/components/ProtocolFlow';
-
-// Three.js scene — client-only, no SSR
-const HeroScene = dynamic(() => import('@/components/HeroScene'), { ssr: false });
+import HeroSection from '@/components/sections/HeroSection';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
-
-const STATS = [
-  { label: 'Agents Deployed',  value: '1,247',   delta: '+12 today'  },
-  { label: 'Total Requests',   value: '89,432',   delta: '+2.1k today' },
-  { label: 'XLM Earned',       value: '12,450',   delta: '+341 today' },
-  { label: 'Active Builders',  value: '342',      delta: '+8 today'   },
-];
 
 const AGENT_TEMPLATES = [
   {
@@ -117,127 +106,9 @@ const fadeUp = {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [typedText, setTypedText] = useState('');
-  const fullText = 'Build · Deploy · Monetize';
-
-  useEffect(() => {
-    let i = 0;
-    const timer = setInterval(() => {
-      if (i < fullText.length) { setTypedText(fullText.slice(0, i + 1)); i++; }
-      else clearInterval(timer);
-    }, 55);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#050508] overflow-x-hidden">
-
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden">
-
-        {/* Three.js canvas — fills the whole hero */}
-        <div className="absolute inset-0 z-0">
-          <HeroScene />
-        </div>
-
-        {/* Radial glow overlays */}
-        <div className="absolute inset-0 z-[1] pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#00FFE5] opacity-[0.04] blur-[100px]" />
-          <div className="absolute top-2/3 left-1/4 w-[400px] h-[400px] rounded-full bg-[#7b61ff] opacity-[0.05] blur-[80px]" />
-        </div>
-
-        {/* Hero content */}
-        <div className="relative z-[2] max-w-5xl mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: 'easeOut' as const }}
-          >
-            {/* Status pill */}
-            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[rgba(0,255,229,0.2)] bg-[rgba(0,255,229,0.04)] text-[#00FFE5] text-xs font-mono mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00FFE5] animate-pulse" />
-              Live on Stellar Testnet · 0x402 Protocol Active
-            </div>
-
-            <h1 className="font-syne text-6xl md:text-8xl font-extrabold tracking-tight text-white mb-5 leading-[1.05]">
-              Agent<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FFE5] to-[#7b61ff]">Forge</span>
-            </h1>
-
-            <h2 className="font-mono text-xl md:text-2xl text-[#00FFE5] mb-7 h-8 tracking-wide">
-              {typedText}<span className="animate-pulse opacity-70">_</span>
-            </h2>
-
-            <p className="text-white/50 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-light">
-              The Web3-native AI agent marketplace on Stellar. Every API call
-              monetized via the <span className="text-[#f59e0b] font-medium">0x402 protocol</span>,
-              every event streaming through <span className="text-[#4ade80] font-medium">QStash pub-sub</span>.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href="/build"
-                className="group relative px-8 py-3.5 font-mono text-sm font-bold rounded-xl overflow-hidden text-black"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-[#00FFE5] to-[#00ccb8] transition-opacity" />
-                <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
-                <span className="relative">Build Your Agent →</span>
-              </Link>
-              <Link
-                href="/agents"
-                className="px-8 py-3.5 font-mono text-sm font-medium border border-[rgba(0,255,229,0.25)] text-[#00FFE5] rounded-xl hover:bg-[rgba(0,255,229,0.06)] transition-all"
-              >
-                Browse Marketplace
-              </Link>
-              <Link
-                href="/docs"
-                className="px-8 py-3.5 font-mono text-sm text-white/40 hover:text-white/70 transition-colors"
-              >
-                Read Docs
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[2] flex flex-col items-center gap-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-        >
-          <span className="font-mono text-[10px] text-white/20 tracking-widest uppercase">scroll</span>
-          <motion.div
-            className="w-px h-10 bg-gradient-to-b from-white/20 to-transparent"
-            animate={{ scaleY: [1, 0.4, 1] }}
-            transition={{ duration: 1.6, repeat: Infinity }}
-          />
-        </motion.div>
-      </section>
-
-      {/* ── STATS BAR ────────────────────────────────────────────────────── */}
-      <section className="border-y border-white/[0.05] bg-[rgba(0,0,0,0.5)] backdrop-blur-sm py-6">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {STATS.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <div className="font-syne text-3xl font-extrabold text-[#00FFE5] tabular-nums">
-                  {stat.value}
-                </div>
-                <div className="font-mono text-xs text-white/40 mt-1">{stat.label}</div>
-                <div className="font-mono text-[10px] text-[#4ade80] mt-0.5">{stat.delta}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* ── PROTOCOL ARCHITECTURE ────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-4 py-24">
