@@ -429,34 +429,33 @@ export default function HomePage() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.25 }}
-              className="rounded-[20px] border border-black/10 bg-white shadow-[0_15px_40px_rgba(0,0,0,0.04)] overflow-hidden font-mono text-sm"
+              className="rounded-[20px] bg-[#0c0914] shadow-2xl overflow-hidden font-mono text-sm border border-white/5"
             >
               {/* Window chrome */}
-              <div className="flex items-center gap-2 px-6 py-4 border-b border-black/5 bg-[#fafafa]">
-                <span className="w-2.5 h-2.5 rounded-full border border-black/10 bg-black/5" />
-                <span className="w-2.5 h-2.5 rounded-full border border-black/10 bg-black/5" />
-                <span className="w-2.5 h-2.5 rounded-full border border-black/10 bg-black/5" />
-                <span className="ml-3 text-[11px] text-black/30 font-medium tracking-wider">mev_bot / src / main.rs</span>
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                  <span className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                  <span className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                </div>
+                <span className="text-[13px] text-white/40 font-medium font-mono tracking-wide">deploy.ts</span>
               </div>
 
-              <pre className="p-6 md:p-8 overflow-x-auto text-[13px] leading-relaxed bg-white">
-<code><span className="text-[#799ee0]">use</span> <span className="text-[#111111]">common::</span><span className="text-black/30">{"{"}</span><span className="text-[#111111] font-medium">HorizonClient, Keypair, PaymentClient, KafkaPublisher</span><span className="text-black/30">{"}"}</span><span className="text-black/30">;</span>{"\n"}
-<span className="text-black/30 italic">{"// "}Load wallet from secret key (Strkey S...)</span>{"\n"}
-<span className="text-[#799ee0]">let</span> <span className="text-[#111111]">keypair</span> <span className="text-black/30">=</span> <span className="text-[#111111]">Keypair::from_secret</span><span className="text-black/30">(</span><span className="text-black/60">&cfg.agent_secret</span><span className="text-black/30">)</span><span className="text-black/30">?;</span>{"\n\n"}
-<span className="text-black/30 italic">{"// "}0x402 client — auto-handles HTTP 402 ↔ Stellar payment</span>{"\n"}
-<span className="text-[#799ee0]">let</span> <span className="text-[#111111]">pay</span> <span className="text-black/30">=</span> <span className="text-[#111111]">PaymentClient::new</span><span className="text-black/30">(</span><span className="text-black/60">keypair.clone(), &horizon_url, &passphrase</span><span className="text-black/30">)</span><span className="text-black/30">?;</span>{"\n\n"}
-<span className="text-black/30 italic">{"// "}Kafka publisher — fire-and-forget trade events</span>{"\n"}
-<span className="text-[#799ee0]">let</span> <span className="text-[#111111]">kafka</span> <span className="text-black/30">=</span> <span className="text-[#111111]">KafkaPublisher::from_env</span><span className="text-black/30">()</span><span className="text-black/30">;</span>{"\n\n"}
-<span className="text-black/30 italic">{"// "}Run — scans order books, executes MEV, publishes events</span>{"\n"}
-<span className="text-[#111111]">strategy::scan_loop</span><span className="text-black/30">(&cfg, &horizon, &keypair, &pay, &kafka)</span><span className="text-black/30">.</span><span className="text-[#799ee0]">await</span></code>
+              <pre className="p-6 md:p-8 overflow-x-auto text-[14px] leading-relaxed text-white/80">
+<code><span className="text-white/40 italic">{"// "}Permissionless factory — any strategy, any time</span>{"\n"}
+<span className="text-[#c084fc]">const</span> <span className="text-[#e2e8f0]">agent</span> <span className="text-[#c084fc]">=</span> <span className="text-[#c084fc]">await</span> <span className="text-[#e2e8f0]">valdyum.</span><span className="text-[#799ee0]">deploy</span><span className="text-[#e2e8f0]">({'{'}</span>{"\n"}
+<span className="text-[#e2e8f0]">  template:</span> <span className="text-[#34d399]">"mev_bot"</span><span className="text-[#e2e8f0]">,</span> <span className="text-white/40 italic">{"// "}Stellar DEX</span>{"\n"}
+<span className="text-[#e2e8f0]">  pair:</span> <span className="text-[#34d399]">"XLM/USDC"</span>{"\n"}
+<span className="text-[#e2e8f0]">{'}'});</span>{"\n\n"}
+<span className="text-white/40">{"->"}</span> <span className="text-[#34d399]">AgentContract</span> <span className="text-white/40">at</span> <span className="text-[#e2e8f0]">C...42E</span></code>
               </pre>
 
-              <div className="px-6 py-5 border-t border-black/5 bg-[#fafafa] flex items-center gap-4">
-                <Link href="/docs/sdk" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-black/40 hover:text-[#799ee0] transition-colors">
+              <div className="px-6 py-5 border-t border-white/5 bg-white/[0.02] flex items-center gap-4">
+                <Link href="/docs/sdk" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-white/40 hover:text-white transition-colors">
                   Full SDK docs <span className="transform group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
-                <span className="text-black/10">·</span>
-                <Link href="/build" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-black/40 hover:text-[#799ee0] transition-colors">
+                <span className="text-white/10">·</span>
+                <Link href="/build" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-white/40 hover:text-white transition-colors">
                   Use template <span className="transform group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
               </div>
