@@ -534,7 +534,7 @@ export default function HomePage() {
             {/* Founder 1 */}
             <div className="group border border-[#111111] bg-white rounded-[20px] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)]">
               <div className="w-full h-64 mb-8 overflow-hidden rounded-xl bg-[#fafafa]">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=sayan" alt="Sayan Roy" className="w-full h-full object-cover mix-blend-multiply opacity-80 group-hover:scale-105 transition-transform duration-700 ease-out" />
+                <img src="/Founder.png" alt="Sayan Roy" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out" />
               </div>
               <div>
                 <h3 className="font-sans text-3xl font-medium text-[#111111] tracking-tight mb-1 group-hover:text-[#799ee0] transition-colors duration-500">Sayan Roy</h3>
@@ -555,7 +555,7 @@ export default function HomePage() {
             {/* Founder 2 */}
             <div className="group border border-[#111111] bg-white rounded-[20px] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)]">
               <div className="w-full h-64 mb-8 overflow-hidden rounded-xl bg-[#fafafa]">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=satish" alt="Satish Jalan" className="w-full h-full object-cover mix-blend-multiply opacity-80 group-hover:scale-105 transition-transform duration-700 ease-out" />
+                <img src="/Co-Founder.png" alt="Satish Jalan" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out" />
               </div>
               <div>
                 <h3 className="font-sans text-3xl font-medium text-[#111111] tracking-tight mb-1 group-hover:text-[#799ee0] transition-colors duration-500">Satish Jalan</h3>
