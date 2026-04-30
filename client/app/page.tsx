@@ -168,16 +168,16 @@ export default function HomePage() {
   }, { scope: containerRef });
 
   return (
-    <div className="min-h-screen bg-[#ffffff] text-[#111111] overflow-x-hidden">
+    <div className="min-h-screen bg-[#f2fbff] text-[#111111] overflow-x-hidden">
       <HeroSection />
 
       {/* ── MASTER HORIZONTAL SCROLL SECTION ────── */}
-      <section ref={containerRef} className="relative w-full h-screen bg-[#ffffff] border-t border-black/5 z-10 overflow-hidden">
+      <section ref={containerRef} className="relative w-full h-[100svh] bg-[#f2fbff] border-t border-black/5 z-10 overflow-hidden">
         <div ref={trackRef} className="flex h-full w-[300vw] will-change-transform">
           
           {/* SLIDE 1: The Problem (100vw) */}
-          <div className="w-screen h-screen flex-shrink-0 flex items-center justify-center px-6 lg:px-12 bg-[#ffffff] relative pt-16 lg:pt-20">
-            <div className="w-full max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-12 lg:gap-24 items-center h-full pb-8 lg:pb-12 z-10">
+          <div className="w-screen h-[100svh] flex-shrink-0 flex flex-col px-6 lg:px-12 bg-[#f2fbff] border-l border-black/5 relative">
+            <div className="w-full max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-8 lg:gap-24 items-center h-full pt-24 pb-8 z-10">
               
               {/* Left Column: Headline */}
               <div className="lg:w-1/2 flex flex-col justify-center h-full pt-8 lg:pt-0 pl-4 lg:pl-12">
@@ -185,10 +185,10 @@ export default function HomePage() {
                   <span className="h-[1px] w-8 bg-black/30" />
                   <span className="font-sans text-xs font-semibold tracking-widest text-black/40 uppercase">The Problem</span>
                 </div>
-                <h2 className="font-sans text-6xl md:text-7xl xl:text-[8rem] font-medium tracking-tighter text-[#111111] leading-[0.9]">
+                <h2 className="font-sans font-medium tracking-tighter text-[#111111] leading-[0.9]" style={{ fontSize: 'clamp(3rem, 7vw, 8rem)' }}>
                   The old world<br/><span className="text-black/30">is broken.</span>
                 </h2>
-                <div className="mt-20 hidden lg:block">
+                <div className="mt-12 xl:mt-20 hidden lg:block">
                   <p className="text-xl font-medium text-black/50 leading-relaxed italic max-w-md">
                     "Every developer starting from zero. Every edge dying in isolation."
                   </p>
@@ -196,7 +196,7 @@ export default function HomePage() {
               </div>
 
               {/* Right Column: 3 Items */}
-              <div className="lg:w-1/2 flex flex-col justify-center gap-14 xl:gap-20 pr-4 lg:pr-12">
+              <div className="lg:w-1/2 flex flex-col justify-center gap-8 md:gap-14 xl:gap-20 pr-4 lg:pr-12 h-full overflow-y-auto min-h-0 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {[
                   {
                     num: 'I',
@@ -217,8 +217,8 @@ export default function HomePage() {
                   <div key={i} className="flex gap-4 md:gap-8 items-start group cursor-default">
                     <span className="font-mono text-xl md:text-2xl text-black/30 group-hover:text-[#799ee0] transition-colors duration-500 font-semibold tracking-widest mt-1 w-12 md:w-16 shrink-0">{item.num}</span>
                     <div className="flex-1">
-                      <h3 className="font-sans text-2xl md:text-3xl font-medium text-[#111111] group-hover:text-[#799ee0] transition-colors duration-500 mb-3 tracking-tight">{item.title}</h3>
-                      <p className="font-sans text-lg text-black/60 leading-relaxed max-w-sm">{item.desc}</p>
+                      <h3 className="font-sans text-xl md:text-3xl font-medium text-[#111111] group-hover:text-[#799ee0] transition-colors duration-500 mb-2 md:mb-3 tracking-tight">{item.title}</h3>
+                      <p className="font-sans text-base md:text-lg text-black/60 leading-relaxed max-w-sm">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -234,43 +234,43 @@ export default function HomePage() {
           </div>
 
           {/* SLIDE 2: 0x402 Core Architecture (100vw) */}
-          <div className="w-screen h-screen flex-shrink-0 flex flex-col justify-center px-6 lg:px-12 bg-[#ffffff] border-l border-black/5">
-            <div className="w-full max-w-[1400px] mx-auto pt-16">
+          <div className="w-screen h-[100svh] flex-shrink-0 flex flex-col px-6 lg:px-12 bg-[#f2fbff] border-l border-black/5">
+            <div className="w-full max-w-[1400px] mx-auto flex flex-col h-full pt-24 pb-8">
               
               {/* Top Header Section */}
-              <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8">
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-6 lg:mb-8 gap-4 lg:gap-8 shrink-0">
                 <div>
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-4 mb-3">
                     <span className="h-[1px] w-8 bg-black/30" />
                     <span className="font-sans text-sm font-medium text-black/50">
                       Core Architecture
                     </span>
                   </div>
-                  <h2 className="font-sans text-5xl md:text-7xl lg:text-[5.5rem] font-medium tracking-tight text-[#111111] leading-[0.95]">
+                  <h2 className="font-sans font-medium tracking-tight text-[#111111] leading-[0.95]" style={{ fontSize: 'clamp(2.5rem, 5vw, 5.5rem)' }}>
                     0x402 × QStash<br/>
                     <span className="text-black/30">× Stellar.</span>
                   </h2>
                 </div>
                 <div className="lg:max-w-md pb-2">
-                  <p className="text-lg font-medium text-black/50 leading-relaxed">
+                  <p className="text-base lg:text-lg font-medium text-black/50 leading-relaxed">
                     The complete payment-to-execution pipeline powering every agent interaction. 
                     Gasless UX, fully verified, all on-chain.
                   </p>
                 </div>
               </div>
 
-              {/* The Huge Card Section */}
-              <div className="relative border border-black/10 flex flex-col lg:flex-row overflow-hidden bg-white rounded-3xl">
-                <div className="p-8 md:p-12 flex flex-col lg:w-[50%] relative z-10 bg-white/80 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none">
-                  <div className="font-mono text-[11px] text-black/30 mb-6 tracking-[0.2em]">01</div>
-                  <h3 className="font-sans text-3xl md:text-4xl font-medium mb-4 tracking-tight text-[#111111]">
+              {/* The Huge Card Section — fills remaining space */}
+              <div className="relative border border-black/10 flex flex-col lg:flex-row overflow-hidden bg-white rounded-3xl flex-1 min-h-0">
+                <div className="p-6 md:p-10 flex flex-col lg:w-[50%] relative z-10 bg-white/80 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <div className="font-mono text-[11px] text-black/30 mb-4 tracking-[0.2em]">01</div>
+                  <h3 className="font-sans text-2xl md:text-3xl font-medium mb-3 tracking-tight text-[#111111]">
                     Execution Pipeline
                   </h3>
-                  <p className="font-sans text-base text-black/60 mb-8 max-w-md leading-relaxed">
+                  <p className="font-sans text-sm md:text-base text-black/60 mb-6 max-w-md leading-relaxed">
                     Five core components orchestrate the lifecycle of an agent. From the initial 
                     HTTP 402 challenge, to Stellar payment verification, to QStash event broadcasting.
                   </p>
-                  <div className="flex flex-col gap-3 mb-10">
+                  <div className="flex flex-col gap-2.5 mb-6">
                     {[
                       { title: 'Agent SDK', desc: 'Rust / 0x402 client' },
                       { title: '0x402 Protocol', desc: 'HTTP 402 → Stellar TX' },
@@ -280,14 +280,14 @@ export default function HomePage() {
                     ].map((step, i) => (
                       <div key={i} className="flex items-center gap-4">
                         <div className="w-1.5 h-1.5 rounded-full bg-black/20" />
-                        <span className="font-sans font-semibold text-[#111111] text-sm md:text-[15px]">{step.title}</span>
+                        <span className="font-sans font-semibold text-[#111111] text-sm">{step.title}</span>
                         <span className="font-sans text-sm text-black/40">—</span>
-                        <span className="font-sans text-sm md:text-[15px] text-black/50">{step.desc}</span>
+                        <span className="font-sans text-sm text-black/50">{step.desc}</span>
                       </div>
                     ))}
                   </div>
                   <div className="mt-auto">
-                    <div className="text-4xl md:text-5xl font-sans font-medium mb-2 text-[#111111]">5</div>
+                    <div className="text-3xl md:text-4xl font-sans font-medium mb-1 text-[#111111]">5</div>
                     <div className="font-mono text-[10px] text-black/40 uppercase tracking-[0.2em]">core pipeline stages</div>
                   </div>
                 </div>
@@ -299,9 +299,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* SLIDE 2: Agent Templates (100vw Bento Grid) */}
-          <div className="w-screen h-screen flex-shrink-0 flex items-center justify-center px-6 lg:px-12 bg-[#ffffff] border-l border-black/5 relative pt-16 lg:pt-20 overflow-hidden">
-            <div className="w-full max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-12 items-center h-full pb-8 lg:pb-12 z-10">
+          {/* SLIDE 3: Agent Templates (100vw Bento Grid) */}
+          <div className="w-screen h-[100svh] flex-shrink-0 flex flex-col px-6 lg:px-12 bg-[#f2fbff] border-l border-black/5 relative overflow-hidden">
+            <div className="w-full max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-8 lg:gap-12 items-center h-full pt-24 pb-8 z-10">
               
               {/* Left Column: Headline */}
               <div className="lg:w-[35%] flex flex-col justify-center h-full pt-8 lg:pt-0">
@@ -309,17 +309,17 @@ export default function HomePage() {
                   <span className="h-[1px] w-8 bg-black/30" />
                   <span className="font-sans text-sm font-medium text-black/50">The Legion</span>
                 </div>
-                <h2 className="font-sans text-5xl md:text-6xl xl:text-7xl font-medium tracking-tight text-[#111111] leading-[0.9]">
+                <h2 className="font-sans font-medium tracking-tight text-[#111111] leading-[0.9]" style={{ fontSize: 'clamp(3rem, 6vw, 7rem)' }}>
                   Build.<br/><span className="text-black/30">Deploy.</span><br/><span className="text-black/10">Earn.</span>
                 </h2>
-                <p className="mt-8 text-base xl:text-lg font-medium text-black/50 leading-relaxed max-w-sm">
+                <p className="mt-6 xl:mt-8 text-sm md:text-base xl:text-lg font-medium text-black/50 leading-relaxed max-w-sm">
                   Six production-grade Rust agents ready to be deployed. Complete with 0x402 billing, gas optimization, and on-chain intelligence.
                 </p>
               </div>
 
               {/* Right Column: Bento Grid */}
-              <div className="lg:w-[65%] h-full max-h-[800px] w-full relative pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-fr gap-4 xl:gap-6 h-full w-full">
+              <div className="lg:w-[65%] h-full w-full relative lg:pt-4 flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-fr gap-4 xl:gap-6 w-full pb-4">
                   {AGENT_TEMPLATES.map((tmpl, i) => {
                     let bentoClass = "col-span-1 row-span-1 flex-col justify-between p-6";
                     if (i === 0) {
