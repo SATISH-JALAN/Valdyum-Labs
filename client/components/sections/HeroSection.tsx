@@ -18,103 +18,96 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-[100svh] bg-[#f2fbff] font-sans text-[#111111]">
+    <section className="relative min-h-[100svh] bg-black font-sans text-white">
       {/* Full-screen video background (using existing sources but with a light overlay) */}
       <video
-        className="absolute inset-0 h-full w-full object-cover opacity-60"
+        className="absolute inset-0 h-full w-full object-cover"
         autoPlay
         muted
         loop
         playsInline
         poster="/hero-video-poster.jpg"
       >
-        <source src="/hero-loop.mp4" type="video/mp4" />
+        <source src="/background/Backgroundvideo.mp4" type="video/mp4" />
       </video>
 
-      {/* Light/marble overlay gradients to ensure high contrast for text */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#f2fbff] via-[rgba(230,238,255,0.85)] to-[rgba(230,238,255,0.2)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(212,175,55,0.03),transparent_40%)]" />
+      {/* Smooth white fade at the bottom to merge seamlessly with the next section */}
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#f2fbff] to-transparent pointer-events-none" />
 
       {/* Content Container */}
       <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] flex-col justify-center px-6 pt-24 pb-28 lg:px-12">
         
-        {/* Main Center Content */}
-        <div className="w-full flex-grow flex flex-col items-center justify-center text-center">
+        {/* Main Center Content -> Right Aligned Content */}
+        <div className="w-full flex-grow flex flex-col items-end justify-center text-right">
           {/* Subtle architectural rule / Subtitle */}
-          <div className="mb-6 flex items-center justify-center gap-4">
-            <span className="h-[1px] w-8 bg-black/30" />
-            <span className="font-sans text-sm font-medium text-black/60">
+          <div className="mb-6 flex items-center justify-end gap-4">
+            <span className="h-[1px] w-8 bg-white/30" />
+            <span className="font-sans text-sm font-medium text-white/70 tracking-wide uppercase">
               Stellar-native agent infrastructure
             </span>
-            <span className="h-[1px] w-8 bg-black/30" />
           </div>
 
-          {/* Headline */}
-          <h1 className="mb-10 font-sans text-5xl md:text-7xl lg:text-[5.5rem] font-medium leading-[1.05] tracking-[-0.03em] text-[#111111]">
+          <h1 className="mb-10 font-sans text-5xl md:text-7xl lg:text-[5.5rem] font-medium leading-[1.05] tracking-[-0.03em] text-white">
             AI agents,<br />
               made to{' '}
-            <span className="relative inline-block min-w-[200px] md:min-w-[280px] text-left">
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={currentWordIndex}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute left-0 inline-block bg-gradient-to-r from-[#111111] via-[#333333] to-[#666666] bg-clip-text text-transparent whitespace-nowrap"
-                >
-                  {dynamicWords[currentWordIndex]}
-                </motion.span>
-              </AnimatePresence>
-              {/* Invisible placeholder to maintain height and baseline */}
-              <span className="invisible block">conquer</span>
-            </span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={currentWordIndex}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="inline-block pb-[0.25em] pr-2 bg-gradient-to-r from-white via-[#e2e8f0] to-[#94a3b8] bg-clip-text text-transparent whitespace-nowrap"
+              >
+                {dynamicWords[currentWordIndex]}
+              </motion.span>
+            </AnimatePresence>
           </h1>
 
-          <div className="flex flex-wrap items-center justify-center gap-5 mt-4">
+          <div className="flex flex-wrap items-center justify-end gap-5 mt-4">
             <Link
               href="/build"
-              className="rounded-full bg-[#111111] px-8 py-3.5 text-sm font-semibold text-white transition-all hover:bg-black"
+              className="rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-all hover:bg-white/90"
             >
               Enter Forge
             </Link>
             <Link
               href="/agents"
-              className="rounded-full border border-black/10 bg-white/50 backdrop-blur px-8 py-3.5 text-sm font-medium text-[#111111] transition-all hover:bg-white"
+              className="rounded-full border border-white/20 bg-black/20 backdrop-blur px-8 py-3.5 text-sm font-medium text-white transition-all hover:bg-white/10"
             >
               Browse Legion
             </Link>
           </div>
         </div>
 
-        {/* Bottom Stats Anchor (Matched to PRISM style) */}
-        <div className="flex flex-col md:flex-row justify-center gap-12 md:gap-24 border-t border-black/5 pt-8 mt-auto w-full">
+        {/* Bottom Stats Anchor (Matched to PRISM style, Right Aligned) */}
+        <div className="flex flex-col md:flex-row justify-end gap-12 md:gap-24 pt-8 mt-auto w-full">
           {/* Stat 1 */}
-          <div className="text-center">
-            <div className="font-sans text-3xl md:text-4xl font-medium tracking-tight text-[#111111]">
+          <div className="text-right">
+            <div className="font-sans text-3xl md:text-4xl font-medium tracking-tight text-white">
               III
             </div>
-            <div className="mt-2 font-sans text-xs font-medium text-black/50">
+            <div className="mt-2 font-sans text-xs font-medium text-white/60">
               Core / Alpha / Prime legions
             </div>
           </div>
           
           {/* Stat 2 */}
-          <div className="text-center">
-            <div className="font-sans text-3xl md:text-4xl font-medium tracking-tight text-[#111111]">
+          <div className="text-right">
+            <div className="font-sans text-3xl md:text-4xl font-medium tracking-tight text-white">
               $50k+
             </div>
-            <div className="mt-2 font-sans text-xs font-medium text-black/50">
+            <div className="mt-2 font-sans text-xs font-medium text-white/60">
               Treasury flow
             </div>
           </div>
 
           {/* Stat 3 */}
-          <div className="text-center">
-            <div className="font-sans text-3xl md:text-4xl font-medium tracking-tight text-[#111111]">
+          <div className="text-right">
+            <div className="font-sans text-3xl md:text-4xl font-medium tracking-tight text-white">
               0x402
             </div>
-            <div className="mt-2 font-sans text-xs font-medium text-black/50">
+            <div className="mt-2 font-sans text-xs font-medium text-white/60">
               Live revenue protocol
             </div>
           </div>

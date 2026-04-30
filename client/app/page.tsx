@@ -172,7 +172,7 @@ export default function HomePage() {
       <HeroSection />
 
       {/* ── MASTER HORIZONTAL SCROLL SECTION ────── */}
-      <section ref={containerRef} className="relative w-full h-[100svh] bg-[#f2fbff] border-t border-black/5 z-10 overflow-hidden">
+      <section ref={containerRef} className="relative w-full h-[100svh] bg-[#f2fbff] z-10 overflow-hidden">
         <div ref={trackRef} className="flex h-full w-[300vw] will-change-transform">
           
           {/* SLIDE 1: The Problem (100vw) */}

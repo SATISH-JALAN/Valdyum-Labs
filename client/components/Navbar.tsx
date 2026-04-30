@@ -19,6 +19,7 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
+  const isDarkHeroContext = pathname === '/' && !isScrolled;
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -93,21 +94,21 @@ export default function Navbar() {
           <div className="flex items-center justify-between w-full">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-black/10 bg-black/[0.03] group-hover:bg-black/[0.07] transition-all duration-300">
+              <span className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border transition-all duration-300 ${isDarkHeroContext ? 'border-white/20 bg-white/5 group-hover:bg-white/10' : 'border-black/10 bg-black/[0.03] group-hover:bg-black/[0.07]'}`}>
                 <Image
                   src={BRAND_LOGO_SRC}
                   alt="Valdyum logo"
                   fill
                   sizes="36px"
-                  className="object-contain p-1.5 invert mix-blend-multiply"
+                  className={`object-contain p-1.5 transition-all duration-300 ${isDarkHeroContext ? 'brightness-0 invert' : 'invert mix-blend-multiply'}`}
                   priority
                 />
               </span>
               <div className="hidden sm:flex flex-col">
-                <span className="text-[15px] font-sans font-semibold tracking-tight text-[#111111] leading-tight">
+                <span className={`text-[15px] font-sans font-semibold tracking-tight leading-tight transition-colors duration-300 ${isDarkHeroContext ? 'text-white' : 'text-[#111111]'}`}>
                   Valdyum
                 </span>
-                <span className="text-[9px] font-mono tracking-[0.15em] text-black/30 uppercase leading-tight">
+                <span className={`text-[9px] font-mono tracking-[0.15em] uppercase leading-tight transition-colors duration-300 ${isDarkHeroContext ? 'text-white/60' : 'text-black/30'}`}>
                   Protocol
                 </span>
               </div>
@@ -130,28 +131,34 @@ export default function Navbar() {
                 }}
               />
 
-              {navLinks.map((link, i) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  ref={(el) => { linkRefs.current[i] = el; }}
-                  onMouseEnter={() => setHoveredIndex(i)}
-                  className={`relative z-10 px-5 py-2 text-[14px] font-sans transition-colors duration-300 whitespace-nowrap ${
-                    pathname === link.href
-                      ? 'text-[#111111] font-medium'
-                      : 'text-black/35 hover:text-[#111111]'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link, i) => {
+                const isActive = pathname === link.href;
+                let linkColor = '';
+                if (isDarkHeroContext) {
+                  linkColor = isActive ? 'text-white font-medium' : 'text-white/60 hover:text-white';
+                } else {
+                  linkColor = isActive ? 'text-[#111111] font-medium' : 'text-black/40 hover:text-[#111111]';
+                }
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    ref={(el) => { linkRefs.current[i] = el; }}
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    className={`relative z-10 px-5 py-2 text-[14px] font-sans transition-colors duration-300 whitespace-nowrap ${linkColor}`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Right Actions */}
             <div className="flex items-center gap-3 shrink-0">
               <Link
                 href="/docs"
-                className="hidden md:block px-4 py-2 text-[14px] font-sans text-black/35 hover:text-[#111111] transition-colors duration-300 whitespace-nowrap"
+                className={`hidden md:block px-4 py-2 text-[14px] font-sans transition-colors duration-300 whitespace-nowrap ${isDarkHeroContext ? 'text-white/60 hover:text-white' : 'text-black/40 hover:text-[#111111]'}`}
               >
                 View docs
               </Link>
@@ -159,7 +166,7 @@ export default function Navbar() {
                 <HoverBorderGradient
                   as="span"
                   containerClassName="cursor-pointer"
-                  className="bg-[#111111] text-white whitespace-nowrap"
+                  className={`whitespace-nowrap transition-colors duration-300 ${isDarkHeroContext ? 'bg-white text-black' : 'bg-[#111111] text-white'}`}
                 >
                   Enter Forge
                 </HoverBorderGradient>

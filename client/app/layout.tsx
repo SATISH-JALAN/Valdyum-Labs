@@ -24,7 +24,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased bg-[var(--color-bg)] text-[#111111]" suppressHydrationWarning>
         <Navbar />
-        <main className="pt-20">
+        <main>
           <AppShell>{children}</AppShell>
         </main>
         <AblyNotifications />
