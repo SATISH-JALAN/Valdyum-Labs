@@ -45,8 +45,8 @@ function toMinuteBucket(ts: string): string {
 function inferExplorerUrl(txHash: string | null, existing?: string | null): string | null {
   if (existing) return existing;
   if (!txHash) return null;
-  const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet' ? 'public' : 'testnet';
-  return `https://stellar.expert/explorer/${network}/tx/${txHash}`;
+  const network = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || process.env.SOLANA_CLUSTER || 'testnet';
+  return `https://explorer.solana.com/tx/${txHash}?cluster=${network}`;
 }
 
 router.get('/analytics', async (req: Request, res: Response) => {
@@ -308,7 +308,7 @@ router.get('/requests', async (req: Request, res: Response) => {
     return;
   }
 
-  const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet' ? 'public' : 'testnet';
+  const network = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || process.env.SOLANA_CLUSTER || 'testnet';
   const withExplorer = (requests || []).map((row: {
     payment_tx_hash?: string | null;
     tx_explorer_url?: string | null;
@@ -318,7 +318,7 @@ router.get('/requests', async (req: Request, res: Response) => {
     tx_explorer_url:
       row.tx_explorer_url ||
       (row.payment_tx_hash
-        ? `https://stellar.expert/explorer/${network}/tx/${row.payment_tx_hash}`
+          ? `https://explorer.solana.com/tx/${row.payment_tx_hash}?cluster=${network}`
         : null),
   }));
 

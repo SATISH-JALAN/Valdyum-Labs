@@ -5,11 +5,12 @@
     "rootDir": "./src",
     "module": "commonjs",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "noEmit": false,
     "paths": {
       "@valdyum/shared/*": ["../packages/shared/src/*"]
     }
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

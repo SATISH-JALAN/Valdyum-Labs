@@ -43,10 +43,11 @@ function getSupabase() {
   });
 }
 
-const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet' ? 'public' : 'testnet';
+const network = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || process.env.SOLANA_CLUSTER || 'testnet';
+const facilitatorUrl = process.env.PAYAI_FACILITATOR_URL || 'https://facilitator.payai.network';
 
 function explorerUrl(txHash: string): string {
-  return `https://stellar.expert/explorer/${network}/tx/${txHash}`;
+  return `https://explorer.solana.com/tx/${txHash}?cluster=${network}`;
 }
 
 async function verifyPayment(
@@ -526,17 +527,19 @@ router.post('/:id/run', async (req: Request, res: Response) => {
       const memo = `agent:${agentId}:req:${requestNonce}`.slice(0, 28);
       
       res.status(402).set({
-        'X-Payment-Required': 'xlm',
+        'X-Payment-Required': 'sol',
         'X-Payment-Amount': String(agent.price_xlm),
         'X-Payment-Address': agent.owner_wallet,
-        'X-Payment-Network': 'stellar',
+        'X-Payment-Network': 'solana',
+        'X-Payment-Facilitator': facilitatorUrl,
         'X-Payment-Memo': memo,
       }).json({
         error: 'Payment required',
         payment_details: {
           amount_xlm: agent.price_xlm,
           address: agent.owner_wallet,
-          network: 'stellar',
+          network: 'solana',
+          facilitator_url: facilitatorUrl,
           memo,
         },
       });

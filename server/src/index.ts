@@ -35,7 +35,14 @@ app.use(cors({
 // ─── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'valdyum-server', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'valdyum-server',
+    timestamp: new Date().toISOString(),
+    facilitatorUrl: process.env.PAYAI_FACILITATOR_URL || 'https://facilitator.payai.network',
+    chain: 'solana',
+    cluster: process.env.SOLANA_CLUSTER || process.env.NEXT_PUBLIC_SOLANA_CLUSTER || 'testnet',
+  });
 });
 
 import agentsRouter from './routes/agents';
