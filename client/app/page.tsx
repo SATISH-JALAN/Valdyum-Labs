@@ -190,7 +190,7 @@ export default function HomePage() {
                 </h2>
                 <div className="mt-20 hidden lg:block">
                   <p className="text-xl font-medium text-black/50 leading-relaxed italic max-w-md">
-                    "Every developer starting from zero. Every edge dying in isolation."
+                    &ldquo;Every developer starting from zero. Every edge dying in isolation.&rdquo;
                   </p>
                 </div>
               </div>
@@ -201,17 +201,17 @@ export default function HomePage() {
                   {
                     num: 'I',
                     title: 'NO VERIFIABLE HISTORY',
-                    desc: "Agents have no permanent, auditable record of what they've done."
+                    desc: 'Agents have no permanent, auditable record of what they&lsquo;ve done.'
                   },
                   {
                     num: 'II',
                     title: 'NO STRATEGY PRIVACY',
-                    desc: "Strategies are exposed and can't be protected."
+                    desc: 'Strategies are exposed and can&rsquo;t be protected.'
                   },
                   {
                     num: 'III',
                     title: 'NO MONETIZATION LAYER',
-                    desc: "No way to earn from the agents you build."
+                    desc: 'No way to earn from the agents you build.'
                   }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-4 md:gap-8 items-start group cursor-default">
@@ -225,7 +225,7 @@ export default function HomePage() {
 
                 <div className="mt-8 lg:hidden block">
                   <p className="text-lg font-medium text-black/40 leading-relaxed italic">
-                    "Every developer starting from zero. Every edge dying in isolation."
+                    &ldquo;Every developer starting from zero. Every edge dying in isolation.&rdquo;
                   </p>
                 </div>
               </div>
@@ -444,8 +444,8 @@ export default function HomePage() {
               <pre className="p-6 md:p-8 overflow-x-auto text-[14px] leading-relaxed text-white/80">
 <code><span className="text-white/40 italic">{"// "}Permissionless factory — any strategy, any time</span>{"\n"}
 <span className="text-[#c084fc]">const</span> <span className="text-[#e2e8f0]">agent</span> <span className="text-[#c084fc]">=</span> <span className="text-[#c084fc]">await</span> <span className="text-[#e2e8f0]">valdyum.</span><span className="text-[#799ee0]">deploy</span><span className="text-[#e2e8f0]">({'{'}</span>{"\n"}
-<span className="text-[#e2e8f0]">  template:</span> <span className="text-[#34d399]">"mev_bot"</span><span className="text-[#e2e8f0]">,</span> <span className="text-white/40 italic">{"// "}Stellar DEX</span>{"\n"}
-<span className="text-[#e2e8f0]">  pair:</span> <span className="text-[#34d399]">"XLM/USDC"</span>{"\n"}
+<span className="text-[#e2e8f0]">  template:</span> <span className="text-[#34d399]">{'"'}mev_bot{'"'}</span><span className="text-[#e2e8f0]">,</span> <span className="text-white/40 italic">{"// "}Solana DEX</span>{"\n"}
+<span className="text-[#e2e8f0]">  pair:</span> <span className="text-[#34d399]">{'"'}SOL/USDC{'"'}</span>{"\n"}
 <span className="text-[#e2e8f0]">{'}'});</span>{"\n\n"}
 <span className="text-white/40">{"->"}</span> <span className="text-[#34d399]">AgentContract</span> <span className="text-white/40">at</span> <span className="text-[#e2e8f0]">C...42E</span></code>
               </pre>

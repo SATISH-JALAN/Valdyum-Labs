@@ -1,6 +1,6 @@
 [package]
 name        = "mev_bot"
-description = "Stellar DEX MEV bot — front-runs large order-book imbalances"
+description = "Solana Jupiter MEV bot — route-optimized opportunity execution"
 version.workspace   = true
 edition.workspace   = true
 authors.workspace   = true
@@ -24,3 +24,7 @@ dotenvy      = { workspace = true }
 rust_decimal = { workspace = true }
 chrono       = { workspace = true }
 futures-util  = { workspace = true }
+solana-sdk    = { workspace = true }
+bs58          = { workspace = true }
+bincode       = { workspace = true }
+base64        = { workspace = true }

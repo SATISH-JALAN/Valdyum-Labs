@@ -6,7 +6,8 @@ import Sidebar from './Sidebar';
 // Pages that should show the left sidebar (matched as exact path or sub-path)
 const APP_PAGES = ['/dashboard', '/marketplace', '/trading', '/agents', '/build', '/workflow'];
 
-function needsSidebar(pathname: string): boolean {
+function needsSidebar(pathname: string | null): boolean {
+  if (!pathname) return false;
   return APP_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 

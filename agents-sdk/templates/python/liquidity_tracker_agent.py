@@ -5,10 +5,10 @@ Order-book depth analysis with real-time slippage simulation.
 import json
 from base_agent import build_single_agent_graph, AgentState
 
-SYSTEM_PROMPT = """You are a liquidity and slippage tracking agent for the Stellar DEX.
+SYSTEM_PROMPT = """You are a liquidity and slippage tracking agent for Solana venues.
 Your analysis includes:
-1. Real-time order book depth for all major Stellar trading pairs
-2. Slippage simulation for trades of various sizes (100, 1000, 10000 XLM)
+1. Real-time order book depth for all major Solana trading pairs
+2. Slippage simulation for trades of various sizes (100, 1000, 10000 SOL)
 3. Liquidity concentration analysis (bid/ask spread, wall detection)
 4. Yield opportunity detection in liquidity pools
 5. Optimal trade routing to minimize market impact
@@ -28,5 +28,5 @@ def run_liquidity_tracker(input_prompt: str, wallet_address: str = "", tx_hash: 
     return app.invoke(state)
 
 if __name__ == "__main__":
-    result = run_liquidity_tracker("Analyze XLM/USDC liquidity depth and simulate 5000 XLM trade slippage")
+    result = run_liquidity_tracker("Analyze SOL/USDC liquidity depth and simulate 5000 SOL trade slippage")
     print(json.dumps(result, indent=2))

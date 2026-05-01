@@ -10,8 +10,8 @@
 //! sentiment, volatility scores) via [`common::PaymentClient`].
 //!
 //! ## Pub-Sub
-//! Every arbitrage execution publishes to Kafka so dashboard/billing are
-//! updated in real time via [`common::KafkaPublisher`].
+//! Every arbitrage execution publishes to QStash so dashboard/billing are
+//! updated in real time via [`common::QStashPublisher`].
 //!
 //! ## Usage
 //! ```
@@ -24,7 +24,7 @@ mod detector;
 mod executor;
 
 use anyhow::Result;
-use common::{HorizonClient, KafkaPublisher, Keypair, PaymentClient};
+use common::{HorizonClient, Keypair, PaymentClient, QStashPublisher};
 use tracing::info;
 
 #[tokio::main]
@@ -41,6 +41,7 @@ async fn main() -> Result<()> {
     info!(
         triangles = cfg.triangles.len(),
         horizon   = %cfg.common.horizon_url,
+        wallet    = %cfg.common.agent_wallet,
         "Arbitrage Tracker starting"
     );
 
@@ -53,10 +54,10 @@ async fn main() -> Result<()> {
         &cfg.common.network_passphrase,
     )?;
 
-    let kafka = KafkaPublisher::from_env();
+    let qstash = QStashPublisher::from_env();
 
     info!(address = %keypair.public_key, "Wallet loaded");
-    info!("0x402 + Kafka enabled for real-time billing and A2A intelligence");
+    info!("0x402 + QStash enabled for real-time billing and A2A intelligence");
 
-    detector::run_detection_loop(&cfg, &horizon, &keypair, &kafka).await
+    detector::run_detection_loop(&cfg, &horizon, &keypair, &qstash).await
 }

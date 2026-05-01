@@ -5,7 +5,8 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
+name = "agent_validator"
 
 [profile.release]
 opt-level = "z"
@@ -18,10 +19,10 @@ codegen-units = 1
 lto = true
 
 [features]
-testutils = ["soroban-sdk/testutils"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
-soroban-sdk = { version = "20.5.0", default-features = true }
-
-[dev-dependencies]
-soroban-sdk = { version = "20.5.0", features = ["testutils"] }
+anchor-lang = { version = "0.30.1" }

@@ -14,7 +14,7 @@ use crate::{
     executor,
 };
 use anyhow::Result;
-use common::{AgentActionEvent, HorizonClient, KafkaPublisher, Keypair, OrderBook};
+use common::{AgentActionEvent, HorizonClient, Keypair, OrderBook, QStashPublisher, TOPIC_AGENT_COMPLETED, TOPIC_MARKETPLACE_ACTIVITY};
 use rust_decimal::prelude::ToPrimitive;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -43,7 +43,7 @@ pub async fn run_detection_loop(
     cfg:     &ArbConfig,
     horizon: &HorizonClient,
     keypair: &Keypair,
-    kafka:   &KafkaPublisher,
+    qstash:  &QStashPublisher,
 ) -> Result<()> {
     info!(
         triangles    = cfg.triangles.len(),
@@ -56,7 +56,7 @@ pub async fn run_detection_loop(
     let mut consecutive_errors = 0u32;
 
     loop {
-        match scan_triangles(cfg, horizon, keypair, kafka).await {
+        match scan_triangles(cfg, horizon, keypair, qstash).await {
             Ok(n) => {
                 if n > 0 { info!("{n} arbitrage trade(s) executed"); }
                 consecutive_errors = 0;
@@ -76,7 +76,7 @@ async fn scan_triangles(
     cfg:     &ArbConfig,
     horizon: &HorizonClient,
     keypair: &Keypair,
-    kafka:   &KafkaPublisher,
+    qstash:  &QStashPublisher,
 ) -> Result<u32> {
     let mut executed = 0u32;
 
@@ -104,16 +104,18 @@ async fn scan_triangles(
                 match executor::execute_triangle(cfg, horizon, keypair, &opp, tri).await {
                     Ok(hash) => {
                         info!(tx = %hash, profit = opp.net_profit, "Arbitrage executed");
-                        kafka.publish_action(&AgentActionEvent {
+                        let event = AgentActionEvent {
                             agent_type:   "arbitrage_tracker".into(),
-                            agent_wallet: keypair.public_key.clone(),
+                            agent_wallet: if cfg.common.agent_wallet.is_empty() { keypair.public_key.clone() } else { cfg.common.agent_wallet.clone() },
                             action:       "tri_arb".into(),
                             asset_pair:   Some(format!("{}/{}/{}", tri.asset_a.code(), tri.asset_b.code(), tri.asset_c.code())),
                             tx_hash:      Some(hash),
                             profit_xlm:   Some(opp.net_profit),
                             latency_ms:   None,
                             created_at:   common::pubsub::now_iso(),
-                        }).await;
+                        };
+                        qstash.publish_json(TOPIC_AGENT_COMPLETED, &event).await;
+                        qstash.publish_json(TOPIC_MARKETPLACE_ACTIVITY, &event).await;
                         executed += 1;
                     }
                     Err(e) => warn!("Triangle {tri_idx} execution failed: {e:#}"),

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { sendSolTransfer, solExplorerTx } from '@/lib/phantom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -243,16 +244,13 @@ const EXECUTOR_STEP_LABELS: Record<ExecutorStep, string> = {
   idle: 'Execute Task',
   checking_wallet: 'Checking wallet…',
   building_tx: 'Building transaction…',
-  signing: 'Waiting for Freighter…',
-  submitting: 'Submitting to Stellar…',
+  signing: 'Waiting for Phantom…',
+  submitting: 'Submitting to Solana…',
   confirming: 'Confirming on ledger…',
   running_agent: 'Running agent…',
   done: 'Done',
   error: 'Retry',
 };
-
-const STELLAR_MEMO_MAX_LENGTH = 28;
-const STELLAR_POLL_INTERVAL_MS = 2_000;
 
 function generateInvoiceNumber(): string {
   return `INV-${Date.now().toString(36).toUpperCase()}`;
@@ -273,26 +271,9 @@ function extractStellarError(err: unknown): string {
     } catch { /* fall through */ }
   }
   const msg = String(err);
-  if (msg.includes('Resource Missing') || msg.includes('404'))
-    return 'Account not found on Stellar network. Make sure Freighter is funded on the correct network.';
-  if (msg.includes('403') || msg.includes('Forbidden'))
-    return 'Access denied. Please unlock Freighter and try again.';
+  if (msg.includes('Resource Missing') || msg.includes('404')) return 'Wallet not found on selected Solana cluster.';
+  if (msg.includes('403') || msg.includes('Forbidden')) return 'Access denied. Please unlock Phantom and try again.';
   return msg.startsWith('Error:') ? msg.slice(7).trim() : msg;
-}
-
-async function waitForLedger(
-  horizonServer: import('stellar-sdk').Horizon.Server,
-  txHash: string,
-  timeoutMs = 30_000
-): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      await horizonServer.transactions().transaction(txHash).call();
-      return;
-    } catch { /* not yet */ }
-    await new Promise((r) => setTimeout(r, STELLAR_POLL_INTERVAL_MS));
-  }
 }
 
 // ─── Payment Executor Section ──────────────────────────────────────────────────
@@ -340,73 +321,20 @@ function PaymentExecutorSection({ walletAddress }: { walletAddress: string }) {
     setInvoice(null);
 
     try {
-      const StellarSdk = await import('stellar-sdk');
-      const freighter = await import('@stellar/freighter-api');
-
-      const connResult = await freighter.isConnected();
-      if (!connResult.isConnected)
-        throw new Error('Freighter wallet is not installed. Visit https://www.freighter.app');
-
-      const accessResult = await freighter.requestAccess();
-      if (accessResult && 'error' in accessResult && accessResult.error)
-        throw new Error('Freighter access denied. Please allow this site in Freighter.');
-
-      const { address: senderKey, error: addrErr } = await freighter.getAddress();
-      if (addrErr || !senderKey)
-        throw new Error('Could not get wallet address. Ensure Freighter is unlocked.');
-
       setStep('building_tx');
-
-      const isMainnet = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet';
-      const horizonUrl =
-        process.env.NEXT_PUBLIC_HORIZON_URL ??
-        (isMainnet ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org');
-      const networkPassphrase = isMainnet ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
-      const horizonServer = new StellarSdk.Horizon.Server(horizonUrl);
-
-      const senderAccount = await horizonServer.loadAccount(senderKey);
-      const memo = `agent:${selectedAgent.id}`.slice(0, STELLAR_MEMO_MAX_LENGTH);
-
-      const tx = new StellarSdk.TransactionBuilder(senderAccount, {
-        fee: StellarSdk.BASE_FEE,
-        networkPassphrase,
-      })
-        .addOperation(
-          StellarSdk.Operation.payment({
-            destination: selectedAgent.ownerAddress,
-            asset: StellarSdk.Asset.native(),
-            amount: selectedAgent.priceXlm.toFixed(7),
-          })
-        )
-        .addMemo(StellarSdk.Memo.text(memo))
-        .setTimeout(60)
-        .build();
-
       setStep('signing');
-
-      const signedResult = await freighter.signTransaction(tx.toXDR(), { networkPassphrase });
-      if (signedResult.error) throw new Error(String(signedResult.error));
-
-      const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedResult.signedTxXdr, networkPassphrase);
-
       setStep('submitting');
-      const submitResult = await horizonServer.submitTransaction(signedTx);
-      const txHash = submitResult.hash;
-
-      setStep('confirming');
-      await waitForLedger(horizonServer, txHash);
+      const { txHash, sender } = await sendSolTransfer(selectedAgent.ownerAddress, selectedAgent.priceXlm);
 
       setStep('running_agent');
-
-      const explorerNet = isMainnet ? 'public' : 'testnet';
-      const explorerUrl = `https://stellar.expert/explorer/${explorerNet}/tx/${txHash}`;
+      const explorerUrl = solExplorerTx(txHash);
 
       const runRes = await fetch(`/api/agents/${selectedAgent.id}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-payment-tx-hash': txHash,
-          'x-payment-from': senderKey,
+          'x-payment-from': sender,
         },
         body: JSON.stringify({ prompt: taskPrompt, task: taskPrompt }),
       });
@@ -424,7 +352,7 @@ function PaymentExecutorSection({ walletAddress }: { walletAddress: string }) {
         task: taskPrompt,
         priceXlm: selectedAgent.priceXlm,
         txHash,
-        fromWallet: senderKey,
+        fromWallet: sender,
         timestamp: new Date().toISOString(),
         explorerUrl,
       });
@@ -437,7 +365,7 @@ function PaymentExecutorSection({ walletAddress }: { walletAddress: string }) {
   };
 
   const busy = step !== 'idle' && step !== 'done' && step !== 'error';
-  const isMainnet = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet';
+  const isMainnet = (process.env.NEXT_PUBLIC_SOLANA_CLUSTER || 'testnet') === 'mainnet-beta';
 
   return (
     <motion.div
@@ -640,7 +568,7 @@ function PaymentExecutorSection({ walletAddress }: { walletAddress: string }) {
 
               <div className="p-3 rounded-lg border border-[rgba(255,184,0,0.2)] bg-[rgba(255,184,0,0.05)] mb-5">
                 <p className="font-mono text-[10px] text-[#FFB800]">
-                  ⚠ This will open Freighter and deduct {selectedAgent.priceXlm} XLM from your wallet.
+                  ⚠ This will open Phantom and deduct {selectedAgent.priceXlm} SOL from your wallet.
                 </p>
               </div>
 
@@ -655,7 +583,7 @@ function PaymentExecutorSection({ walletAddress }: { walletAddress: string }) {
                   onClick={handleExecute}
                   className="flex-1 py-2.5 text-sm font-mono bg-[#00FFE5] text-black rounded-lg font-bold hover:bg-[#00e6ce] transition-colors"
                 >
-                  Confirm &amp; Sign in Freighter
+                  Confirm &amp; Sign in Phantom
                 </button>
               </div>
             </motion.div>
@@ -888,7 +816,7 @@ export default function WorkflowPage() {
             </svg>
           </div>
           <h2 className="font-syne text-2xl font-bold text-white mb-2">Workflow Studio</h2>
-          <p className="text-gray-400 font-mono text-sm">Connect your Freighter wallet to access the workflow canvas and task planner.</p>
+          <p className="text-gray-400 font-mono text-sm">Connect your Phantom wallet to access the workflow canvas and task planner.</p>
         </motion.div>
       </div>
     );

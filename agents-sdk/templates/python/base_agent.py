@@ -17,7 +17,14 @@ import requests
 load_dotenv()
 
 AGENTFORGE_API_URL = os.getenv("AGENTFORGE_API_URL", "http://localhost:3000")
-STELLAR_AGENT_SECRET = os.getenv("STELLAR_AGENT_SECRET", "")
+SOLANA_RPC_URL = os.getenv("SOLANA_RPC_URL", "https://api.testnet.solana.com")
+SOLANA_CLUSTER = os.getenv("SOLANA_CLUSTER", "testnet")
+SOLANA_AGENT_SECRET = os.getenv("SOLANA_AGENT_SECRET", "")
+SOLANA_AGENT_WALLET = os.getenv("SOLANA_AGENT_WALLET", "")
+QSTASH_URL = os.getenv("QSTASH_URL", "https://qstash.upstash.io")
+QSTASH_TOKEN = os.getenv("QSTASH_TOKEN", "")
+PLATFORM_API_URL = os.getenv("PLATFORM_API_URL", "http://localhost:3000")
+JUPITER_API_KEY = os.getenv("JUPITER_API_KEY", "")
 ABLY_API_KEY = os.getenv("ABLY_API_KEY", "")
 
 
@@ -32,6 +39,11 @@ class AgentState(TypedDict):
     payment_address: str
     error: Optional[str]
     steps: List[str]
+
+
+def get_default_wallet_address() -> str:
+    """Return the default wallet address used for Solana payment headers."""
+    return SOLANA_AGENT_WALLET or SOLANA_AGENT_SECRET or ""
 
 
 def build_model(model_name: str = "openai-gpt4o-mini"):
@@ -50,10 +62,13 @@ def create_run_node(agent_id: str, system_prompt: str, model_name: str = "openai
 
     def run_node(state: AgentState) -> AgentState:
         headers = {"Content-Type": "application/json"}
-        if state.get("wallet_address"):
-            headers["X-Payment-Wallet"] = state["wallet_address"]
+        wallet_address = state.get("wallet_address") or get_default_wallet_address()
+        if wallet_address:
+            headers["X-Payment-Wallet"] = wallet_address
+            headers["X-Solana-Payment-Wallet"] = wallet_address
         if state.get("tx_hash"):
             headers["X-Payment-Tx-Hash"] = state["tx_hash"]
+            headers["X-Solana-Payment-Signature"] = state["tx_hash"]
 
         try:
             resp = requests.post(
@@ -147,13 +162,13 @@ if __name__ == "__main__":
     # Example: run a single agent
     agent_app = build_single_agent_graph(
         agent_id="1",
-        system_prompt="You are a DeFi analyst.",
+        system_prompt="You are a Solana DeFi analyst.",
     )
     result = agent_app.invoke({
-        "input": "Analyze current XLM/USDC liquidity",
+        "input": "Analyze current SOL/USDC liquidity",
         "output": "",
         "agent_id": "1",
-        "wallet_address": "",
+        "wallet_address": get_default_wallet_address(),
         "tx_hash": None,
         "payment_required": False,
         "payment_amount": 0.0,

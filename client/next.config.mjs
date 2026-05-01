@@ -4,10 +4,6 @@ import createMDX from '@next/mdx';
 const nextConfig = {
   pageExtensions: ['ts', 'tsx', 'md', 'mdx'],
 
-  // Use standalone output on non-Windows platforms for Docker-friendly builds.
-  // Windows local builds can fail when Next tries to create symlinks in the standalone trace tree.
-  output: process.platform === 'win32' ? undefined : 'standalone',
-
   // Prevent Next.js from bundling native Node.js modules (stellar-sdk uses
   // sodium-native which is a native addon). This keeps them as external
   // Node.js requires inside serverless functions instead of being inlined

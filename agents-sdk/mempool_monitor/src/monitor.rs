@@ -8,7 +8,7 @@ use crate::{
     config::MonitorConfig,
 };
 use anyhow::Result;
-use common::{horizon::SseTransaction, ChainEvent, HorizonClient, KafkaPublisher};
+use common::{horizon::SseTransaction, ChainEvent, HorizonClient, QStashPublisher, TOPIC_CHAIN_SYNCED};
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
@@ -16,7 +16,7 @@ use tracing::{debug, info};
 const CHANNEL_CAPACITY: usize = 4096;
 
 /// Start the monitor: spawns an SSE reader and runs the alert processor.
-pub async fn run(cfg: &MonitorConfig, horizon: &HorizonClient, kafka: &KafkaPublisher) -> Result<()> {
+pub async fn run(cfg: &MonitorConfig, horizon: &HorizonClient, qstash: &QStashPublisher) -> Result<()> {
     info!(cursor = %cfg.stream_cursor, "Subscribing to Horizon SSE stream");
 
     let (tx, mut rx) = mpsc::channel::<SseTransaction>(CHANNEL_CAPACITY);
@@ -58,7 +58,7 @@ pub async fn run(cfg: &MonitorConfig, horizon: &HorizonClient, kafka: &KafkaPubl
                 detail     = %alert.detail,
                 "🚨 ALERT"
             );
-            kafka.publish_chain_event(&ChainEvent {
+            qstash.publish_json(TOPIC_CHAIN_SYNCED, &ChainEvent {
                 event_type: alert.rule_name.clone(),
                 tx_hash:    tx_event.hash.clone(),
                 ledger:     tx_event.ledger,

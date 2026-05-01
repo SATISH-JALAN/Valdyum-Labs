@@ -1,4 +1,4 @@
-//! Fee-bump relay engine with 0x402 payment verification and Kafka pub-sub.
+//! Fee-bump relay engine with 0x402 payment verification and QStash pub-sub.
 //!
 //! ## Protocol flow
 //! ```text
@@ -14,7 +14,7 @@
 //!   │                          │  bump fee, sign, submit          │
 //!   │                          │──────────────────────────────►  │
 //!   │◄── 200 OK ───────────── │                                  │
-//!   │  { tx_hash }             │  publish to Kafka               │
+//!   │  { tx_hash }             │  publish to QStash              │
 //!   │                          │──(TOPIC_BILLING_UPDATED)──►     │
 //! ```
 //!
@@ -31,10 +31,10 @@
 use crate::config::RelayerConfig;
 use anyhow::{bail, Context, Result};
 use common::{
-    pubsub::{now_iso, AgentActionEvent, PaymentReceivedEvent},
+    pubsub::{now_iso, AgentActionEvent, PaymentReceivedEvent, TOPIC_AGENT_COMPLETED, TOPIC_BILLING_UPDATED, TOPIC_PAYMENT_CONFIRMED},
     stellar_tx::TransactionBuilder,
     wallet::Keypair,
-    HorizonClient, KafkaPublisher,
+    HorizonClient, QStashPublisher,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -66,7 +66,7 @@ pub async fn run_relay_loop(
     cfg:     &RelayerConfig,
     horizon: &HorizonClient,
     keypair: &Keypair,
-    kafka:   &KafkaPublisher,
+    qstash:  &QStashPublisher,
 ) -> Result<()> {
     let queue: Arc<Mutex<Vec<RelayJob>>> = Arc::new(Mutex::new(Vec::new()));
     let interval = Duration::from_secs(cfg.poll_interval_secs);
@@ -89,10 +89,10 @@ pub async fn run_relay_loop(
             let cfg     = cfg.clone();
             let horizon = horizon.clone();
             let keypair = keypair.clone();
-            let kafka   = kafka.clone();
+            let qstash   = qstash.clone();
 
             let handle = tokio::spawn(async move {
-                match relay_job(&cfg, &horizon, &keypair, &kafka, &job).await {
+                match relay_job(&cfg, &horizon, &keypair, &qstash, &job).await {
                     Ok(hash) => info!(tx = %hash, submitter = %job.submitter, "Relay confirmed"),
                     Err(e)   => warn!("Relay job failed: {e:#}"),
                 }
@@ -110,7 +110,7 @@ async fn relay_job(
     cfg:     &RelayerConfig,
     horizon: &HorizonClient,
     keypair: &Keypair,
-    kafka:   &KafkaPublisher,
+    qstash:  &QStashPublisher,
     job:     &RelayJob,
 ) -> Result<String> {
     // ── Verify the 0x402 payment ──────────────────────────────────────────────
@@ -143,7 +143,7 @@ async fn relay_job(
     let hash = result.hash.context("Relay rejected by Horizon")?;
 
     // ── Publish billing event to Kafka ────────────────────────────────────────
-    kafka.publish_payment(&PaymentReceivedEvent {
+    let payment_event = PaymentReceivedEvent {
         payer_wallet:    job.submitter.clone(),
         receiver_wallet: fee_source.clone(),
         amount_xlm:      job.payment_xlm,
@@ -151,18 +151,21 @@ async fn relay_job(
         memo:            format!("relay:{}", &hash[..8]),
         service:         "relayer".into(),
         created_at:      now_iso(),
-    }).await;
+    };
+    qstash.publish_json(TOPIC_PAYMENT_CONFIRMED, &payment_event).await;
+    qstash.publish_json(TOPIC_BILLING_UPDATED, &payment_event).await;
 
-    kafka.publish_action(&AgentActionEvent {
+    let action_event = AgentActionEvent {
         agent_type:   "relayer".into(),
-        agent_wallet: fee_source.clone(),
+        agent_wallet: if cfg.common.agent_wallet.is_empty() { fee_source.clone() } else { cfg.common.agent_wallet.clone() },
         action:       "fee_bump_relay".into(),
         asset_pair:   None,
         tx_hash:      Some(hash.clone()),
         profit_xlm:   Some(job.payment_xlm - bump_fee as f64 / 10_000_000.0),
         latency_ms:   None,
         created_at:   now_iso(),
-    }).await;
+    };
+    qstash.publish_json(TOPIC_AGENT_COMPLETED, &action_event).await;
 
     Ok(hash)
 }

@@ -13,4 +13,4 @@ export { TOPICS } from './constants/topics';
 export type { Topic } from './constants/topics';
 
 // Utils
-export { truncateAddress } from './utils/stellar';
+export { truncateAddress } from './utils/solana';

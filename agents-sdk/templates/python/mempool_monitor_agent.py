@@ -1,15 +1,15 @@
 """
 AgentForge LangGraph Template — Mempool Monitor Agent
-Real-time Stellar transaction stream analysis via Horizon SSE.
+Real-time Solana transaction stream analysis via RPC and websocket feeds.
 """
 import json
 from base_agent import build_single_agent_graph, AgentState
 
-SYSTEM_PROMPT = """You are a mempool monitoring agent for the Stellar network.
+SYSTEM_PROMPT = """You are a mempool monitoring agent for the Solana network.
 Your responsibilities:
-1. Analyze pending Stellar transactions from the Horizon SSE stream
-2. Detect unusually large transactions (>100,000 XLM)
-3. Identify smart contract interactions with Soroban
+1. Analyze pending Solana transactions from the network stream
+2. Detect unusually large transactions (>100,000 SOL equivalent)
+3. Identify smart contract interactions with Solana programs
 4. Alert on potential wash trading or market manipulation
 5. Track transaction fee trends and network congestion
 
@@ -27,5 +27,5 @@ def run_mempool_monitor(input_prompt: str, wallet_address: str = "", tx_hash: st
     return app.invoke(state)
 
 if __name__ == "__main__":
-    result = run_mempool_monitor("Monitor Stellar mempool for large transactions in the last 5 minutes")
+    result = run_mempool_monitor("Monitor Solana mempool for large transactions in the last 5 minutes")
     print(json.dumps(result, indent=2))

@@ -26,7 +26,7 @@ mod orders;
 mod strategy;
 
 use anyhow::Result;
-use common::{HorizonClient, KafkaPublisher, Keypair, PaymentClient};
+use common::{HorizonClient, Keypair, PaymentClient, QStashPublisher};
 use tracing::info;
 
 #[tokio::main]
@@ -43,6 +43,7 @@ async fn main() -> Result<()> {
     info!(
         strategy   = ?cfg.active_strategy,
         horizon    = %cfg.common.horizon_url,
+        wallet     = %cfg.common.agent_wallet,
         "Trading Bot starting"
     );
 
@@ -53,10 +54,10 @@ async fn main() -> Result<()> {
         &cfg.common.horizon_url,
         &cfg.common.network_passphrase,
     )?;
-    let kafka    = KafkaPublisher::from_env();
+    let qstash    = QStashPublisher::from_env();
 
     info!(address = %keypair.public_key, "Wallet loaded");
-    info!("0x402 + Kafka enabled for real-time billing and price intelligence");
+    info!("0x402 + QStash enabled for real-time billing and price intelligence");
 
-    strategy::run(&cfg, &horizon, &keypair, &kafka).await
+    strategy::run(&cfg, &horizon, &keypair, &qstash).await
 }
