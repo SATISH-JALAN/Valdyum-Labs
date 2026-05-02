@@ -2,6 +2,12 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import type { PhantomProvider } from '../types/phantom';
+
+function getPhantomProvider(): PhantomProvider | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return window.phantom?.solana || window.solana;
+}
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -20,58 +26,87 @@ const STEP_LABELS: Record<PaymentStep, string> = {
   idle: 'Sign & Pay',
   checking_wallet: 'Checking wallet...',
   building_tx: 'Building transaction...',
-  signing: 'Sign in Freighter...',
-  submitting: 'Submitting to Stellar...',
+  signing: 'Sign in Phantom...',
+  submitting: 'Submitting to Solana...',
   confirming: 'Confirming on ledger...',
   done: 'Done!',
   error: 'Retry',
 };
 
-/** Extract the most useful human-readable message from a Stellar SDK error. */
-function extractStellarError(err: unknown): string {
+function extractChainError(err: unknown): string {
   if (!err) return 'Unknown error';
-  // Horizon BadResponseError has .response?.data?.extras?.result_codes
-  if (typeof err === 'object' && err !== null) {
-    const e = err as Record<string, unknown>;
-    try {
-      const resultCodes = (
-        (e.response as Record<string, unknown>)?.data as Record<string, unknown>
-      )?.extras as Record<string, unknown>;
-      if (resultCodes?.result_codes) {
-        const rc = resultCodes.result_codes as Record<string, unknown>;
-        return `Transaction failed: ${rc.transaction || ''} ops: ${JSON.stringify(rc.operations || [])}`;
-      }
-    } catch {
-      // fall through
-    }
-  }
   const msg = String(err);
-  if (msg.includes('Resource Missing') || msg.includes('404')) {
-    return 'Account not found on this Stellar network. Make sure your Freighter wallet is funded and connected to the correct network.';
-  }
-  if (msg.includes('403') || msg.includes('Forbidden')) {
-    return 'Access denied. Please unlock your Freighter wallet and try again.';
+  if (msg.toLowerCase().includes('phantom')) {
+    return msg;
   }
   return msg.startsWith('Error:') ? msg.slice(7).trim() : msg;
 }
 
-/** Poll Horizon until the transaction appears on the ledger (up to 30 s). */
 async function waitForLedgerConfirmation(
-  horizonServer: import('stellar-sdk').Horizon.Server,
+  connection: import('@solana/web3.js').Connection,
   txHash: string,
   timeoutMs = 30_000
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      await horizonServer.transactions().transaction(txHash).call();
-      return; // confirmed
+      const status = await connection.getSignatureStatus(txHash);
+      if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
+        return;
+      }
     } catch {
-      // Not yet on ledger, wait and retry
+      // wait and retry
     }
     await new Promise((r) => setTimeout(r, 2_000));
   }
-  // Timed out, but submission was successful so we proceed anyway
+}
+
+async function buildAndSendSolanaTransfer(
+  ownerAddress: string,
+  amountSol: number
+): Promise<{ txHash: string; sender: string }> {
+  const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
+  const provider = getPhantomProvider();
+
+  if (!provider?.isPhantom) {
+    throw new Error('Phantom wallet is not installed. Please install Phantom and retry.');
+  }
+
+  await provider.connect();
+  const sender = provider.publicKey?.toString();
+  if (!sender) {
+    throw new Error('Could not read connected wallet public key from Phantom.');
+  }
+
+  const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || 'testnet';
+  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL
+    || (cluster === 'mainnet-beta' ? 'https://api.mainnet-beta.solana.com' : 'https://api.testnet.solana.com');
+  const connection = new Connection(rpcUrl, 'confirmed');
+
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+
+  const tx = new Transaction({
+    feePayer: new PublicKey(sender),
+    recentBlockhash: blockhash,
+  }).add(
+    SystemProgram.transfer({
+      fromPubkey: new PublicKey(sender),
+      toPubkey: new PublicKey(ownerAddress),
+      lamports: Math.round(amountSol * LAMPORTS_PER_SOL),
+    })
+  );
+
+  const signed = await provider.signTransaction(tx);
+  const txHash = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+  await connection.confirmTransaction({ signature: txHash, blockhash, lastValidBlockHeight }, 'confirmed');
+
+  try {
+    await waitForLedgerConfirmation(connection, txHash);
+  } catch {
+    // non-fatal
+  }
+
+  return { txHash, sender };
 }
 
 export default function PaymentModal({
@@ -95,85 +130,24 @@ export default function PaymentModal({
     setError(null);
     setTxExplorerUrl(null);
     try {
-      const StellarSdk = await import('stellar-sdk');
-      const freighter = await import('@stellar/freighter-api');
-
-      // Check Freighter is installed and connected
-      const connectionResult = await freighter.isConnected();
-      if (!connectionResult.isConnected) {
-        throw new Error(
-          'Freighter wallet is not installed. Please install the Freighter browser extension at https://www.freighter.app and try again.'
-        );
-      }
-
-      // Request access if not already granted
-      const accessResult = await freighter.requestAccess();
-      if (accessResult && 'error' in accessResult && accessResult.error) {
-        throw new Error('Freighter access denied. Please allow this site in Freighter and try again.');
-      }
-
-      const { address: senderKey, error: addrError } = await freighter.getAddress();
-      if (addrError || !senderKey) throw new Error('Could not get wallet address. Please ensure Freighter is unlocked and you have granted permission.');
-
       setStep('building_tx');
-
-      const isMainnet = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet';
-      const horizonUrl = process.env.NEXT_PUBLIC_HORIZON_URL ||
-        (isMainnet ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org');
-      const networkPassphrase = isMainnet
-        ? StellarSdk.Networks.PUBLIC
-        : StellarSdk.Networks.TESTNET;
-
-      const horizonServer = new StellarSdk.Horizon.Server(horizonUrl);
-      const senderAccount = await horizonServer.loadAccount(senderKey);
-
-      const memo = paymentMemo || `agent:${agentId}`;
-      const txBuilder = new StellarSdk.TransactionBuilder(senderAccount, {
-        fee: StellarSdk.BASE_FEE,
-        networkPassphrase,
-      })
-        .addOperation(
-          StellarSdk.Operation.payment({
-            destination: ownerAddress,
-            asset: StellarSdk.Asset.native(),
-            amount: priceXlm.toFixed(7),
-          })
-        )
-        .addMemo(StellarSdk.Memo.text(memo.slice(0, 28)))
-        .setTimeout(60)
-        .build();
-
       setStep('signing');
-
-      const xdr = txBuilder.toXDR();
-      const signedResult = await freighter.signTransaction(xdr, { networkPassphrase });
-      if (signedResult.error) throw new Error(String(signedResult.error));
-      const signedXdr = signedResult.signedTxXdr;
-      const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
+      const { txHash, sender } = await buildAndSendSolanaTransfer(ownerAddress, priceXlm);
 
       setStep('submitting');
+      const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || 'testnet';
+      setTxExplorerUrl(`https://explorer.solana.com/tx/${txHash}?cluster=${cluster}`);
 
-      const result = await horizonServer.submitTransaction(signedTx);
-      const txHash = result.hash;
-
-      // Build explorer URL for display
-      const explorerNetwork = isMainnet ? 'public' : 'testnet';
-      setTxExplorerUrl(`https://stellar.expert/explorer/${explorerNetwork}/tx/${txHash}`);
-
-      // Wait for the transaction to be queryable on Horizon before handing
-      // the hash back to the run route (avoids "Transaction not found" on verify).
       setStep('confirming');
-      await waitForLedgerConfirmation(horizonServer, txHash);
-
       setStep('done');
-      onPaymentSuccess(txHash, senderKey);
+      onPaymentSuccess(txHash, sender);
     } catch (err) {
-      setError(extractStellarError(err));
+      setError(extractChainError(err));
       setStep('error');
     }
   };
 
-  const isMainnet = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet';
+  const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || 'testnet';
 
   return (
     <AnimatePresence>
@@ -193,7 +167,7 @@ export default function PaymentModal({
             className="w-full max-w-md mx-4 rounded-2xl border border-[rgba(0,255,229,0.2)] bg-[#0a0a10] p-6"
           >
             <h2 className="font-syne text-xl font-bold text-white mb-1">Payment Required</h2>
-            <p className="text-gray-400 text-sm mb-6">402 — Pay-per-request via Stellar</p>
+            <p className="text-gray-400 text-sm mb-6">402 — Pay-per-request via Solana</p>
 
             <div className="space-y-3 mb-6 font-mono text-sm">
               <div className="flex justify-between">
@@ -202,12 +176,12 @@ export default function PaymentModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Amount</span>
-                <span className="text-[#FFB800] font-bold">{priceXlm} XLM</span>
+                <span className="text-[#FFB800] font-bold">{priceXlm} SOL</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Network</span>
-                <span className={isMainnet ? 'text-[#4ade80]' : 'text-[#00FFE5]'}>
-                  Stellar {isMainnet ? 'Mainnet' : 'Testnet'}
+                <span className={cluster === 'mainnet-beta' ? 'text-[#4ade80]' : 'text-[#00FFE5]'}>
+                  Solana {cluster === 'mainnet-beta' ? 'Mainnet' : 'Testnet'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -235,7 +209,7 @@ export default function PaymentModal({
                   rel="noreferrer"
                   className="underline hover:text-green-300"
                 >
-                  View on Stellar Expert ↗
+                  View on Solana Explorer ↗
                 </a>
               </div>
             )}

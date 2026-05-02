@@ -1,0 +1,11 @@
+[provider]
+cluster = "testnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.testnet]
+agent_registry = "11111111111111111111111111111112"
+agent_validator = "11111111111111111111111111111113"
+af_token = "11111111111111111111111111111114"
+
+[scripts]
+test = "echo 'Add Anchor tests in tests/*.ts'"

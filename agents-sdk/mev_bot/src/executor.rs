@@ -1,104 +1,139 @@
-//! MEV executor — builds and submits front-run/sandwich transactions.
-//!
-//! ## Gas optimisation
-//! - Both legs of the sandwich (entry + exit) are submitted in a **single
-//!   transaction** with two ManageSellOffer operations, halving the per-tx fee.
-//! - A strict 30-second time-bound prevents the order from lingering if the
-//!   market moves while waiting for ledger confirmation.
-//! - The fee is dynamically bumped by `fee_bump_stroops` above the current
-//!   base fee so the transaction is prioritised during surge pricing.
+//! MEV executor — Solana Jupiter version.
 
 use crate::{config::MevBotConfig, strategy::Opportunity};
-use anyhow::{bail, Result};
-use common::{
-    stellar_tx::{price_to_fraction, OperationBody, TransactionBuilder},
-    wallet::{xlm_to_stroops, Keypair},
-    HorizonClient,
+use anyhow::{anyhow, bail, Context, Result};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use reqwest::Client;
+use serde::Deserialize;
+use solana_sdk::{
+    pubkey::Pubkey,
+    signature::{Keypair, Signer},
+    transaction::VersionedTransaction,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::str::FromStr;
 use tracing::{debug, info};
 
-/// Build, sign, and submit the MEV sandwich trade.
-///
-/// Returns the transaction hash on success.
+const JUPITER_QUOTE_URL: &str = "https://quote-api.jup.ag/v6/quote";
+const JUPITER_SWAP_URL: &str = "https://quote-api.jup.ag/v6/swap";
+
+#[derive(Debug, Deserialize)]
+struct QuoteRoute {
+    #[serde(flatten)]
+    _raw: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct QuoteResponse {
+    data: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SwapResponse {
+    #[serde(rename = "swapTransaction")]
+    swap_transaction: String,
+}
+
+/// Execute MEV sandwich trade (entry + exit swap)
 pub async fn execute(
-    cfg:     &MevBotConfig,
-    horizon: &HorizonClient,
+    cfg: &MevBotConfig,
+    rpc: &crate::rpc::RpcClient,
     keypair: &Keypair,
-    opp:     &Opportunity,
+    opp: &Opportunity,
     pair_idx: usize,
 ) -> Result<String> {
     let pair = &cfg.pairs[pair_idx];
 
-    // ── Compute sizes ─────────────────────────────────────────────────────────
-    let size_stroops = xlm_to_stroops(opp.opportunity_size);
-    if size_stroops <= 0 { bail!("Opportunity size too small"); }
+    let sell_mint = Pubkey::from_str(&pair.sell_mint)?;
+    let buy_mint  = Pubkey::from_str(&pair.buy_mint)?;
 
-    // Entry: buy the undervalued side.
-    // Exit:  place a sell offer at detected_price + spread/2 (GTC).
+    // ── Compute size ─────────────────────────────────────────────
+    let size = opp.opportunity_size;
+    if size <= 0.0 {
+        bail!("Opportunity size too small");
+    }
+
     let entry_price = opp.detected_price;
     let exit_price  = entry_price * (1.0 + (cfg.common.max_slippage_bps as f64 / 20_000.0));
 
-    let (ep_n, ep_d) = price_to_fraction(entry_price);
-    let (xp_n, xp_d) = price_to_fraction(exit_price);
-
-    // ── Timing ───────────────────────────────────────────────────────────────
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
-        .as_secs();
-    let max_time = now + cfg.tx_expiry_secs;
-
-    // ── Effective fee: base + bump ────────────────────────────────────────────
-    let effective_fee = cfg.common.base_fee_stroops + cfg.fee_bump_stroops;
-
-    // ── Fetch fresh sequence number ───────────────────────────────────────────
-    let account = horizon.get_account(&keypair.public_key).await?;
-    let sequence = account.sequence_number() + 1;
-
     debug!(
-        sequence,
-        size_stroops,
+        size,
         entry_price,
         exit_price,
-        "Building MEV transaction"
+        agent_wallet = %cfg.common.agent_wallet,
+        "Building Solana MEV transaction"
     );
 
-    // ── Build transaction: entry offer + exit offer in one envelope ───────────
-    let tx_b64 = TransactionBuilder::new(&keypair.public_key, sequence, effective_fee)
-        .with_timebounds(now, max_time)
-        .with_memo("xylem:mev")
-        // Entry leg: buy `pair.buy_asset` using `pair.sell_asset`
-        .add_op(OperationBody::ManageBuyOffer {
-            selling:    pair.sell_asset.clone(),
-            buying:     pair.buy_asset.clone(),
-            buy_amount: size_stroops,
-            price_n:    ep_n,
-            price_d:    ep_d,
-            offer_id:   0, // new offer
-        })
-        // Exit leg: immediately post a matching sell offer at a higher price
-        .add_op(OperationBody::ManageSellOffer {
-            selling:  pair.buy_asset.clone(),
-            buying:   pair.sell_asset.clone(),
-            amount:   size_stroops,
-            price_n:  xp_n,
-            price_d:  xp_d,
-            offer_id: 0,
-        })
-        .sign_and_encode(keypair, &cfg.common.network_passphrase)?;
+    let entry_sig = execute_jupiter_swap(
+        rpc,
+        keypair,
+        &sell_mint,
+        &buy_mint,
+        size as u64,
+        &cfg.common.agent_wallet,
+    )
+    .await
+    .context("entry swap failed")?;
+    let exit_sig = execute_jupiter_swap(
+        rpc,
+        keypair,
+        &buy_mint,
+        &sell_mint,
+        size as u64,
+        &cfg.common.agent_wallet,
+    )
+    .await
+    .context("exit swap failed")?;
 
-    let result = horizon.submit_transaction(&tx_b64).await?;
+    info!(entry_sig = %entry_sig, exit_sig = %exit_sig, "MEV swaps confirmed");
 
-    match result.hash {
-        Some(hash) => {
-            info!(tx = %hash, "MEV transaction confirmed");
-            Ok(hash)
-        }
-        None => {
-            bail!(
-                "Transaction rejected: {:?}",
-                result.extras.as_ref().and_then(|e| e.get("result_codes"))
-            )
-        }
-    }
+    Ok(exit_sig)
+}
+
+/// Build and submit a Jupiter swap transaction with agent wallet metadata.
+pub async fn execute_jupiter_swap(
+    rpc: &crate::rpc::RpcClient,
+    keypair: &Keypair,
+    input_mint: &Pubkey,
+    output_mint: &Pubkey,
+    amount: u64,
+    agent_wallet: &str,
+) -> Result<String> {
+    let client = Client::new();
+    let quote_url = format!(
+        "{JUPITER_QUOTE_URL}?inputMint={}&outputMint={}&amount={amount}&slippageBps={}",
+        input_mint,
+        output_mint,
+        50
+    );
+
+    let quote: QuoteResponse = client.get(&quote_url).send().await?.json().await?;
+    let route = quote
+        .data
+        .first()
+        .ok_or_else(|| anyhow!("No Jupiter route found"))?;
+
+    // Include agent wallet identifier and 0x402 protocol metadata in swap request
+    let swap_body = serde_json::json!({
+        "quoteResponse": route,
+        "userPublicKey": keypair.pubkey().to_string(),
+        "wrapAndUnwrapSol": true,
+        // Agent wallet and 0x402 protocol metadata
+        "agentWallet": agent_wallet,
+        "protocol": "0x402",
+    });
+
+    let swap: SwapResponse = client
+        .post(JUPITER_SWAP_URL)
+        .json(&swap_body)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let tx_bytes = BASE64.decode(swap.swap_transaction.as_bytes())?;
+    let tx: VersionedTransaction = bincode::deserialize(&tx_bytes)?;
+    let tx = VersionedTransaction::try_new(tx.message, &[keypair])?;
+
+    let sig = rpc.send_and_confirm_transaction(&tx).await?;
+    Ok(sig.to_string())
 }

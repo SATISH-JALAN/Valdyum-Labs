@@ -1,6 +1,6 @@
 [package]
 name        = "liquidity_slippage_tracker"
-description = "Stellar DEX liquidity depth and price impact (slippage) monitor"
+description = "Solana liquidity pool slippage tracking and analysis"
 version.workspace   = true
 edition.workspace   = true
 authors.workspace   = true

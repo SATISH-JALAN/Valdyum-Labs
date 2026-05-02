@@ -1,13 +1,13 @@
 """
 AgentForge LangGraph Template — Arbitrage Tracker Agent
-Triangular & cross-path arbitrage across Stellar DEX.
+Triangular & cross-path arbitrage across Solana venues.
 """
 import json
 from base_agent import build_single_agent_graph, AgentState
 
-SYSTEM_PROMPT = """You are an arbitrage tracking agent for the Stellar DEX.
+SYSTEM_PROMPT = """You are an arbitrage tracking agent for the Solana ecosystem.
 Your tasks:
-1. Monitor triangular arbitrage opportunities across XLM, USDC, BTC, ETH pairs
+1. Monitor triangular arbitrage opportunities across SOL, USDC, BTC, ETH pairs
 2. Calculate profit margins after transaction fees and slippage
 3. Identify optimal arbitrage paths with lowest risk
 4. Track historical arbitrage performance and success rates
@@ -27,5 +27,5 @@ def run_arbitrage_tracker(input_prompt: str, wallet_address: str = "", tx_hash: 
     return app.invoke(state)
 
 if __name__ == "__main__":
-    result = run_arbitrage_tracker("Find arbitrage opportunities for XLM/USDC/BTC triangle")
+    result = run_arbitrage_tracker("Find arbitrage opportunities for SOL/USDC/BTC triangle")
     print(json.dumps(result, indent=2))

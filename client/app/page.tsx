@@ -1,23 +1,22 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import LiveFeed from '@/components/LiveFeed';
 import ProtocolFlow from '@/components/ProtocolFlow';
+import HeroSection from '@/components/sections/HeroSection';
 
-// Three.js scene — client-only, no SSR
-const HeroScene = dynamic(() => import('@/components/HeroScene'), { ssr: false });
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+import Lenis from 'lenis';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 // ── Data ──────────────────────────────────────────────────────────────────────
-
-const STATS = [
-  { label: 'Agents Deployed',  value: '1,247',   delta: '+12 today'  },
-  { label: 'Total Requests',   value: '89,432',   delta: '+2.1k today' },
-  { label: 'XLM Earned',       value: '12,450',   delta: '+341 today' },
-  { label: 'Active Builders',  value: '342',      delta: '+8 today'   },
-];
 
 const AGENT_TEMPLATES = [
   {
@@ -117,233 +116,266 @@ const fadeUp = {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [typedText, setTypedText] = useState('');
-  const fullText = 'Build · Deploy · Monetize';
+  const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
+  // Initialize Lenis Smooth Scroll
   useEffect(() => {
-    let i = 0;
-    const timer = setInterval(() => {
-      if (i < fullText.length) { setTypedText(fullText.slice(0, i + 1)); i++; }
-      else clearInterval(timer);
-    }, 55);
-    return () => clearInterval(timer);
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      touchMultiplier: 2,
+    });
+
+    lenis.on('scroll', ScrollTrigger.update);
+
+    gsap.ticker.add((time) => {
+      lenis.raf(time * 1000);
+    });
+
+    gsap.ticker.lagSmoothing(0, 0);
+
+    return () => {
+      lenis.destroy();
+      gsap.ticker.remove(lenis.raf);
+    };
   }, []);
 
+  // Initialize GSAP Horizontal Scroll
+  useGSAP(() => {
+    const track = trackRef.current;
+    const container = containerRef.current;
+    if (!track || !container) return;
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: container,
+        start: "top top",
+        end: "+=3000", // Increased scroll distance for 3 slides
+        scrub: 1,
+        pin: true,
+        invalidateOnRefresh: true,
+      }
+    });
+
+    // Step 1: Slide the entire track from Problem -> 0x402 -> The Legion
+    tl.to(track, {
+      x: () => -(window.innerWidth * 2),
+      ease: "none",
+      duration: 1
+    });
+
+  }, { scope: containerRef });
+
   return (
-    <div className="min-h-screen bg-[#050508] overflow-x-hidden">
+    <div className="min-h-screen bg-[#ffffff] text-[#111111] overflow-x-hidden">
+      <HeroSection />
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden">
-
-        {/* Three.js canvas — fills the whole hero */}
-        <div className="absolute inset-0 z-0">
-          <HeroScene />
-        </div>
-
-        {/* Radial glow overlays */}
-        <div className="absolute inset-0 z-[1] pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#00FFE5] opacity-[0.04] blur-[100px]" />
-          <div className="absolute top-2/3 left-1/4 w-[400px] h-[400px] rounded-full bg-[#7b61ff] opacity-[0.05] blur-[80px]" />
-        </div>
-
-        {/* Hero content */}
-        <div className="relative z-[2] max-w-5xl mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: 'easeOut' as const }}
-          >
-            {/* Status pill */}
-            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[rgba(0,255,229,0.2)] bg-[rgba(0,255,229,0.04)] text-[#00FFE5] text-xs font-mono mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00FFE5] animate-pulse" />
-              Live on Stellar Testnet · 0x402 Protocol Active
-            </div>
-
-            <h1 className="font-syne text-6xl md:text-8xl font-extrabold tracking-tight text-white mb-5 leading-[1.05]">
-              Agent<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FFE5] to-[#7b61ff]">Forge</span>
-            </h1>
-
-            <h2 className="font-mono text-xl md:text-2xl text-[#00FFE5] mb-7 h-8 tracking-wide">
-              {typedText}<span className="animate-pulse opacity-70">_</span>
-            </h2>
-
-            <p className="text-white/50 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-light">
-              The Web3-native AI agent marketplace on Stellar. Every API call
-              monetized via the <span className="text-[#f59e0b] font-medium">0x402 protocol</span>,
-              every event streaming through <span className="text-[#4ade80] font-medium">QStash pub-sub</span>.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href="/build"
-                className="group relative px-8 py-3.5 font-mono text-sm font-bold rounded-xl overflow-hidden text-black"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-[#00FFE5] to-[#00ccb8] transition-opacity" />
-                <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
-                <span className="relative">Build Your Agent →</span>
-              </Link>
-              <Link
-                href="/agents"
-                className="px-8 py-3.5 font-mono text-sm font-medium border border-[rgba(0,255,229,0.25)] text-[#00FFE5] rounded-xl hover:bg-[rgba(0,255,229,0.06)] transition-all"
-              >
-                Browse Marketplace
-              </Link>
-              <Link
-                href="/docs"
-                className="px-8 py-3.5 font-mono text-sm text-white/40 hover:text-white/70 transition-colors"
-              >
-                Read Docs
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[2] flex flex-col items-center gap-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-        >
-          <span className="font-mono text-[10px] text-white/20 tracking-widest uppercase">scroll</span>
-          <motion.div
-            className="w-px h-10 bg-gradient-to-b from-white/20 to-transparent"
-            animate={{ scaleY: [1, 0.4, 1] }}
-            transition={{ duration: 1.6, repeat: Infinity }}
-          />
-        </motion.div>
-      </section>
-
-      {/* ── STATS BAR ────────────────────────────────────────────────────── */}
-      <section className="border-y border-white/[0.05] bg-[rgba(0,0,0,0.5)] backdrop-blur-sm py-6">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {STATS.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <div className="font-syne text-3xl font-extrabold text-[#00FFE5] tabular-nums">
-                  {stat.value}
+      {/* ── MASTER HORIZONTAL SCROLL SECTION ────── */}
+      <section ref={containerRef} className="relative w-full h-screen bg-[#ffffff] border-t border-black/5 z-10 overflow-hidden">
+        <div ref={trackRef} className="flex h-full w-[300vw] will-change-transform">
+          
+          {/* SLIDE 1: The Problem (100vw) */}
+          <div className="w-screen h-screen flex-shrink-0 flex items-center justify-center px-6 lg:px-12 bg-[#ffffff] relative pt-16 lg:pt-20">
+            <div className="w-full max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-12 lg:gap-24 items-center h-full pb-8 lg:pb-12 z-10">
+              
+              {/* Left Column: Headline */}
+              <div className="lg:w-1/2 flex flex-col justify-center h-full pt-8 lg:pt-0 pl-4 lg:pl-12">
+                <div className="flex items-center gap-4 mb-8">
+                  <span className="h-[1px] w-8 bg-black/30" />
+                  <span className="font-sans text-xs font-semibold tracking-widest text-black/40 uppercase">The Problem</span>
                 </div>
-                <div className="font-mono text-xs text-white/40 mt-1">{stat.label}</div>
-                <div className="font-mono text-[10px] text-[#4ade80] mt-0.5">{stat.delta}</div>
-              </motion.div>
-            ))}
+                <h2 className="font-sans text-6xl md:text-7xl xl:text-[8rem] font-medium tracking-tighter text-[#111111] leading-[0.9]">
+                  The old world<br/><span className="text-black/30">is broken.</span>
+                </h2>
+                <div className="mt-20 hidden lg:block">
+                  <p className="text-xl font-medium text-black/50 leading-relaxed italic max-w-md">
+                    &ldquo;Every developer starting from zero. Every edge dying in isolation.&rdquo;
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column: 3 Items */}
+              <div className="lg:w-1/2 flex flex-col justify-center gap-14 xl:gap-20 pr-4 lg:pr-12">
+                {[
+                  {
+                    num: 'I',
+                    title: 'NO VERIFIABLE HISTORY',
+                    desc: 'Agents have no permanent, auditable record of what they&lsquo;ve done.'
+                  },
+                  {
+                    num: 'II',
+                    title: 'NO STRATEGY PRIVACY',
+                    desc: 'Strategies are exposed and can&rsquo;t be protected.'
+                  },
+                  {
+                    num: 'III',
+                    title: 'NO MONETIZATION LAYER',
+                    desc: 'No way to earn from the agents you build.'
+                  }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4 md:gap-8 items-start group cursor-default">
+                    <span className="font-mono text-xl md:text-2xl text-black/30 group-hover:text-[#799ee0] transition-colors duration-500 font-semibold tracking-widest mt-1 w-12 md:w-16 shrink-0">{item.num}</span>
+                    <div className="flex-1">
+                      <h3 className="font-sans text-2xl md:text-3xl font-medium text-[#111111] group-hover:text-[#799ee0] transition-colors duration-500 mb-3 tracking-tight">{item.title}</h3>
+                      <p className="font-sans text-lg text-black/60 leading-relaxed max-w-sm">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="mt-8 lg:hidden block">
+                  <p className="text-lg font-medium text-black/40 leading-relaxed italic">
+                    &ldquo;Every developer starting from zero. Every edge dying in isolation.&rdquo;
+                  </p>
+                </div>
+              </div>
+
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* ── PROTOCOL ARCHITECTURE ────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 py-24">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-14"
-        >
-          <span className="font-mono text-[11px] text-[#00FFE5] tracking-[0.25em] uppercase">
-            Core Architecture
-          </span>
-          <h2 className="font-syne text-4xl md:text-5xl font-bold text-white mt-3">
-            0x402 × QStash × Stellar
-          </h2>
-          <p className="text-white/40 font-mono text-sm mt-4 max-w-xl mx-auto">
-            The complete payment-to-execution pipeline powering every agent interaction
-          </p>
-        </motion.div>
-
-        {/* Flow diagram */}
-        <div className="mb-16">
-          <ProtocolFlow />
-        </div>
-
-        {/* Feature cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {PROTOCOL_FEATURES.map((feat, i) => (
-            <motion.div
-              key={feat.title}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="group p-5 rounded-2xl border border-white/[0.06] bg-[rgba(255,255,255,0.02)] hover:border-white/[0.12] hover:bg-[rgba(255,255,255,0.04)] transition-all duration-300"
-            >
-              <span className="text-3xl">{feat.icon}</span>
-              <h3 className={`font-mono text-sm font-bold mt-3 ${feat.color}`}>{feat.title}</h3>
-              <p className="text-white/40 text-xs leading-relaxed mt-2">{feat.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── AGENT TEMPLATES ──────────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 pb-24">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-14"
-        >
-          <span className="font-mono text-[11px] text-[#7b61ff] tracking-[0.25em] uppercase">
-            Agent SDK Templates
-          </span>
-          <h2 className="font-syne text-4xl md:text-5xl font-bold text-white mt-3">
-            Production-Grade Rust Agents
-          </h2>
-          <p className="text-white/40 font-mono text-sm mt-4 max-w-xl mx-auto">
-            Battle-hardened templates with 0x402 billing, QStash events, gas optimisation,
-            and Stellar wallet signing baked in.
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {AGENT_TEMPLATES.map((tmpl, i) => (
-            <motion.div
-              key={tmpl.title}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              <Link href={tmpl.href} className="block h-full group">
-                <div
-                  className={`h-full p-6 rounded-2xl border ${tmpl.border} bg-gradient-to-br ${tmpl.color} hover:brightness-110 transition-all duration-300 relative overflow-hidden`}
-                >
-                  {/* Top row */}
-                  <div className="flex items-start justify-between mb-4">
-                    <span className="text-4xl">{tmpl.icon}</span>
-                    <span className="font-mono text-[9px] text-white/30 border border-white/10 px-1.5 py-0.5 rounded tracking-widest">
-                      {tmpl.tag}
+          {/* SLIDE 2: 0x402 Core Architecture (100vw) */}
+          <div className="w-screen h-screen flex-shrink-0 flex flex-col justify-center px-6 lg:px-12 bg-[#ffffff] border-l border-black/5">
+            <div className="w-full max-w-[1400px] mx-auto pt-16">
+              
+              {/* Top Header Section */}
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8">
+                <div>
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="h-[1px] w-8 bg-black/30" />
+                    <span className="font-sans text-sm font-medium text-black/50">
+                      Core Architecture
                     </span>
                   </div>
-
-                  <h3 className="font-syne text-lg font-bold text-white mb-2">{tmpl.title}</h3>
-                  <p className="text-white/40 text-sm leading-relaxed">{tmpl.desc}</p>
-
-                  <div className="mt-5 flex items-center gap-1.5 font-mono text-xs text-[#00FFE5] group-hover:gap-3 transition-all">
-                    Use template <span>→</span>
-                  </div>
-
-                  {/* Hover shimmer */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-gradient-to-br from-white/[0.03] to-transparent" />
+                  <h2 className="font-sans text-5xl md:text-7xl lg:text-[5.5rem] font-medium tracking-tight text-[#111111] leading-[0.95]">
+                    0x402 × QStash<br/>
+                    <span className="text-black/30">× Stellar.</span>
+                  </h2>
                 </div>
-              </Link>
-            </motion.div>
-          ))}
+                <div className="lg:max-w-md pb-2">
+                  <p className="text-lg font-medium text-black/50 leading-relaxed">
+                    The complete payment-to-execution pipeline powering every agent interaction. 
+                    Gasless UX, fully verified, all on-chain.
+                  </p>
+                </div>
+              </div>
+
+              {/* The Huge Card Section */}
+              <div className="relative border border-black/10 flex flex-col lg:flex-row overflow-hidden bg-white rounded-3xl">
+                <div className="p-8 md:p-12 flex flex-col lg:w-[50%] relative z-10 bg-white/80 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none">
+                  <div className="font-mono text-[11px] text-black/30 mb-6 tracking-[0.2em]">01</div>
+                  <h3 className="font-sans text-3xl md:text-4xl font-medium mb-4 tracking-tight text-[#111111]">
+                    Execution Pipeline
+                  </h3>
+                  <p className="font-sans text-base text-black/60 mb-8 max-w-md leading-relaxed">
+                    Five core components orchestrate the lifecycle of an agent. From the initial 
+                    HTTP 402 challenge, to Stellar payment verification, to QStash event broadcasting.
+                  </p>
+                  <div className="flex flex-col gap-3 mb-10">
+                    {[
+                      { title: 'Agent SDK', desc: 'Rust / 0x402 client' },
+                      { title: '0x402 Protocol', desc: 'HTTP 402 → Stellar TX' },
+                      { title: 'Platform API', desc: 'Next.js · Soroban verify' },
+                      { title: 'QStash Pub-Sub', desc: 'Upstash · 8 topics' },
+                      { title: 'Dashboard', desc: 'Real-time · Ably' },
+                    ].map((step, i) => (
+                      <div key={i} className="flex items-center gap-4">
+                        <div className="w-1.5 h-1.5 rounded-full bg-black/20" />
+                        <span className="font-sans font-semibold text-[#111111] text-sm md:text-[15px]">{step.title}</span>
+                        <span className="font-sans text-sm text-black/40">—</span>
+                        <span className="font-sans text-sm md:text-[15px] text-black/50">{step.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-auto">
+                    <div className="text-4xl md:text-5xl font-sans font-medium mb-2 text-[#111111]">5</div>
+                    <div className="font-mono text-[10px] text-black/40 uppercase tracking-[0.2em]">core pipeline stages</div>
+                  </div>
+                </div>
+                <div className="absolute top-0 right-0 bottom-0 w-full lg:w-[65%] pointer-events-none" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 35%)', WebkitMaskImage: '-webkit-linear-gradient(left, transparent 0%, black 35%)' }}>
+                  <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2000&auto=format&fit=crop" alt="Architecture Concept" className="w-full h-full object-cover object-left opacity-90 mix-blend-multiply" />
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* SLIDE 2: Agent Templates (100vw Bento Grid) */}
+          <div className="w-screen h-screen flex-shrink-0 flex items-center justify-center px-6 lg:px-12 bg-[#ffffff] border-l border-black/5 relative pt-16 lg:pt-20 overflow-hidden">
+            <div className="w-full max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-12 items-center h-full pb-8 lg:pb-12 z-10">
+              
+              {/* Left Column: Headline */}
+              <div className="lg:w-[35%] flex flex-col justify-center h-full pt-8 lg:pt-0">
+                <div className="flex items-center gap-4 mb-6">
+                  <span className="h-[1px] w-8 bg-black/30" />
+                  <span className="font-sans text-sm font-medium text-black/50">The Legion</span>
+                </div>
+                <h2 className="font-sans text-5xl md:text-6xl xl:text-7xl font-medium tracking-tight text-[#111111] leading-[0.9]">
+                  Build.<br/><span className="text-black/30">Deploy.</span><br/><span className="text-black/10">Earn.</span>
+                </h2>
+                <p className="mt-8 text-base xl:text-lg font-medium text-black/50 leading-relaxed max-w-sm">
+                  Six production-grade Rust agents ready to be deployed. Complete with 0x402 billing, gas optimization, and on-chain intelligence.
+                </p>
+              </div>
+
+              {/* Right Column: Bento Grid */}
+              <div className="lg:w-[65%] h-full max-h-[800px] w-full relative pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-fr gap-4 xl:gap-6 h-full w-full">
+                  {AGENT_TEMPLATES.map((tmpl, i) => {
+                    let bentoClass = "col-span-1 row-span-1 flex-col justify-between p-6";
+                    if (i === 0) {
+                      bentoClass = "col-span-1 md:col-span-2 md:row-span-2 flex-col justify-between p-8";
+                    }
+
+                    return (
+                      <Link 
+                        key={tmpl.title} 
+                        href={tmpl.href} 
+                        className={`border border-[#111111] bg-white hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)] rounded-[20px] flex transition-all duration-500 group z-10 ${bentoClass}`}
+                      >
+                        {i === 0 ? (
+                          <>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="w-2.5 h-2.5 bg-[#111111] group-hover:bg-[#799ee0] transition-colors duration-500 rounded-[1px]" />
+                              <span className="font-mono text-xl font-medium text-black/20 tracking-wider">01</span>
+                            </div>
+                            <div className="mt-auto">
+                              <span className="font-sans text-[11px] font-semibold text-black/40 tracking-wider uppercase mb-3 block">{tmpl.tag}</span>
+                              <h3 className="font-sans text-4xl font-medium text-[#111111] group-hover:text-[#799ee0] transition-colors duration-500 mb-4 tracking-tight">{tmpl.title}</h3>
+                              <p className="font-sans text-base text-black/60 leading-relaxed max-w-sm">{tmpl.desc}</p>
+                              
+                              <div className="mt-8 pt-6 border-t border-black/5 flex items-center gap-2">
+                                <span className="font-sans text-xs font-semibold tracking-wide uppercase text-black/30 group-hover:text-[#799ee0] transition-colors duration-500">Deploy Template</span>
+                                <span className="text-black/30 group-hover:text-[#799ee0] transition-colors transform group-hover:translate-x-1 duration-500">→</span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between w-full mb-6">
+                              <div className="w-1.5 h-1.5 bg-[#111111]/30 group-hover:bg-[#799ee0] transition-colors duration-500 rounded-[1px]" />
+                              <span className="font-mono text-xs font-medium text-black/20 tracking-wider">0{i+1}</span>
+                            </div>
+                            <div className="mt-auto">
+                              <h3 className="font-sans text-lg font-medium text-[#111111] mb-1 group-hover:text-[#799ee0] transition-colors duration-500 tracking-tight">{tmpl.title}</h3>
+                              <p className="font-sans text-[13px] text-black/50 leading-relaxed">{tmpl.desc}</p>
+                            </div>
+                          </>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </section>
 
       {/* ── LIVE FEED + CODE PREVIEW ──────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <section className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 pt-24">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 xl:gap-12">
 
           {/* Live feed — 2 cols */}
           <div className="lg:col-span-2">
@@ -351,12 +383,15 @@ export default function HomePage() {
               initial={{ opacity: 0, x: -24 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="mb-4"
+              className="mb-8"
             >
-              <span className="font-mono text-[11px] text-[#4ade80] tracking-[0.2em] uppercase">
-                Live Network
-              </span>
-              <h3 className="font-syne text-2xl font-bold text-white mt-1">
+              <div className="flex items-center gap-4 mb-3">
+                <span className="h-[1px] w-6 bg-black/30" />
+                <span className="font-sans text-xs font-semibold tracking-wider uppercase text-black/40">
+                  Live Network
+                </span>
+              </div>
+              <h3 className="font-sans text-4xl font-medium tracking-tight text-[#111111]">
                 Real-Time Activity
               </h3>
             </motion.div>
@@ -376,12 +411,15 @@ export default function HomePage() {
               initial={{ opacity: 0, x: 24 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="mb-4"
+              className="mb-8"
             >
-              <span className="font-mono text-[11px] text-[#7b61ff] tracking-[0.2em] uppercase">
-                SDK Preview
-              </span>
-              <h3 className="font-syne text-2xl font-bold text-white mt-1">
+              <div className="flex items-center gap-4 mb-3">
+                <span className="h-[1px] w-6 bg-black/30" />
+                <span className="font-sans text-xs font-semibold tracking-wider uppercase text-black/40">
+                  SDK Preview
+                </span>
+              </div>
+              <h3 className="font-sans text-4xl font-medium tracking-tight text-[#111111]">
                 Three Lines to Go Live
               </h3>
             </motion.div>
@@ -391,35 +429,34 @@ export default function HomePage() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.25 }}
-              className="rounded-2xl border border-white/[0.07] bg-[rgba(5,5,8,0.9)] backdrop-blur overflow-hidden font-mono text-sm"
+              className="rounded-[20px] bg-[#0c0914] shadow-2xl overflow-hidden font-mono text-sm border border-white/5"
             >
               {/* Window chrome */}
-              <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/[0.05]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#f87171] opacity-70" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] opacity-70" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#4ade80] opacity-70" />
-                <span className="ml-3 text-[11px] text-white/20">mev_bot / src / main.rs</span>
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                  <span className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                  <span className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                </div>
+                <span className="text-[13px] text-white/40 font-medium font-mono tracking-wide">deploy.ts</span>
               </div>
 
-              <pre className="p-5 overflow-x-auto text-[13px] leading-7">
-<code><span className="text-[#7b61ff]">use</span> <span className="text-white/80">common::</span><span className="text-[#00FFE5]">{"{"}</span><span className="text-white">HorizonClient, Keypair, PaymentClient, KafkaPublisher</span><span className="text-[#00FFE5]">{"}"}</span><span className="text-white/40">;</span>{"\n"}
-<span className="text-white/40">{"// "}</span><span className="text-white/30">Load wallet from secret key (Strkey S...)</span>{"\n"}
-<span className="text-[#7b61ff]">let</span> <span className="text-white">keypair</span> <span className="text-white/40">=</span> <span className="text-[#4ade80]">Keypair::from_secret</span><span className="text-[#00FFE5]">(</span><span className="text-white/50">&cfg.agent_secret</span><span className="text-[#00FFE5]">)</span><span className="text-white/40">?;</span>{"\n\n"}
-<span className="text-white/40">{"// "}</span><span className="text-white/30">0x402 client — auto-handles HTTP 402 ↔ Stellar payment</span>{"\n"}
-<span className="text-[#7b61ff]">let</span> <span className="text-white">pay</span> <span className="text-white/40">=</span> <span className="text-[#4ade80]">PaymentClient::new</span><span className="text-[#00FFE5]">(</span><span className="text-white/80">keypair.clone(), &horizon_url, &passphrase</span><span className="text-[#00FFE5]">)</span><span className="text-white/40">?;</span>{"\n\n"}
-<span className="text-white/40">{"// "}</span><span className="text-white/30">Kafka publisher — fire-and-forget trade events</span>{"\n"}
-<span className="text-[#7b61ff]">let</span> <span className="text-white">kafka</span> <span className="text-white/40">=</span> <span className="text-[#4ade80]">KafkaPublisher::from_env</span><span className="text-[#00FFE5]">()</span><span className="text-white/40">;</span>{"\n\n"}
-<span className="text-white/40">{"// "}</span><span className="text-white/30">Run — scans order books, executes MEV, publishes events</span>{"\n"}
-<span className="text-[#4ade80]">strategy::scan_loop</span><span className="text-[#00FFE5]">(&cfg, &horizon, &keypair, &pay, &kafka)</span><span className="text-white/40">.</span><span className="text-[#7b61ff]">await</span></code>
+              <pre className="p-6 md:p-8 overflow-x-auto text-[14px] leading-relaxed text-white/80">
+<code><span className="text-white/40 italic">{"// "}Permissionless factory — any strategy, any time</span>{"\n"}
+<span className="text-[#c084fc]">const</span> <span className="text-[#e2e8f0]">agent</span> <span className="text-[#c084fc]">=</span> <span className="text-[#c084fc]">await</span> <span className="text-[#e2e8f0]">valdyum.</span><span className="text-[#799ee0]">deploy</span><span className="text-[#e2e8f0]">({'{'}</span>{"\n"}
+<span className="text-[#e2e8f0]">  template:</span> <span className="text-[#34d399]">{'"'}mev_bot{'"'}</span><span className="text-[#e2e8f0]">,</span> <span className="text-white/40 italic">{"// "}Solana DEX</span>{"\n"}
+<span className="text-[#e2e8f0]">  pair:</span> <span className="text-[#34d399]">{'"'}SOL/USDC{'"'}</span>{"\n"}
+<span className="text-[#e2e8f0]">{'}'});</span>{"\n\n"}
+<span className="text-white/40">{"->"}</span> <span className="text-[#34d399]">AgentContract</span> <span className="text-white/40">at</span> <span className="text-[#e2e8f0]">C...42E</span></code>
               </pre>
 
-              <div className="px-5 pb-4 flex items-center gap-3">
-                <Link href="/docs/sdk" className="font-mono text-[11px] text-[#00FFE5] hover:underline">
-                  Full SDK docs →
+              <div className="px-6 py-5 border-t border-white/5 bg-white/[0.02] flex items-center gap-4">
+                <Link href="/docs/sdk" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-white/40 hover:text-white transition-colors">
+                  Full SDK docs <span className="transform group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
                 <span className="text-white/10">·</span>
-                <Link href="/build" className="font-mono text-[11px] text-white/30 hover:text-white/60 transition-colors">
-                  Use template →
+                <Link href="/build" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-white/40 hover:text-white transition-colors">
+                  Use template <span className="transform group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
               </div>
             </motion.div>
@@ -428,25 +465,27 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA BANNER ───────────────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 pb-28">
+      <section className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-32">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative rounded-3xl border border-white/[0.08] overflow-hidden"
+          className="relative rounded-[24px] border border-black/10 bg-[#fafafa] overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.04)]"
         >
-          {/* Background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[rgba(0,255,229,0.05)] via-[rgba(123,97,255,0.05)] to-[rgba(0,0,0,0.8)]" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[1px] bg-gradient-to-r from-transparent via-[#00FFE5]/40 to-transparent" />
-
-          <div className="relative px-8 py-14 text-center">
-            <span className="font-mono text-[11px] text-[#00FFE5] tracking-[0.25em] uppercase">
-              Ship Today
-            </span>
-            <h2 className="font-syne text-4xl md:text-5xl font-extrabold text-white mt-4 mb-4">
+          <div className="relative px-8 py-20 text-center flex flex-col items-center">
+            <div className="flex items-center gap-4 mb-6">
+              <span className="h-[1px] w-6 bg-black/30" />
+              <span className="font-sans text-xs font-semibold tracking-widest uppercase text-black/50">
+                Ship Today
+              </span>
+              <span className="h-[1px] w-6 bg-black/30" />
+            </div>
+            
+            <h2 className="font-sans text-5xl md:text-6xl font-medium tracking-tight text-[#111111] mb-6">
               From idea to on-chain revenue<br className="hidden md:block" /> in minutes.
             </h2>
-            <p className="text-white/40 font-mono text-sm mb-10 max-w-lg mx-auto">
+            
+            <p className="font-sans text-lg text-black/60 leading-relaxed mb-10 max-w-2xl mx-auto">
               Connect your Freighter wallet, pick a Rust template, configure strategy params,
               deploy on Soroban — and start earning XLM per request automatically via 0x402.
             </p>
@@ -454,23 +493,150 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/build"
-                className="group relative px-10 py-4 font-mono text-sm font-bold rounded-xl overflow-hidden text-black"
+                className="group relative px-10 py-4 font-sans text-xs font-semibold tracking-wide uppercase rounded-xl overflow-hidden text-white bg-[#111111] hover:bg-[#799ee0] transition-colors duration-500"
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-[#00FFE5] to-[#00ccb8]" />
-                <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
-                <span className="relative">Start Building →</span>
+                <span className="relative flex items-center gap-2">
+                  Start Building 
+                  <span className="transform group-hover:translate-x-1 transition-transform duration-500">→</span>
+                </span>
               </Link>
               <Link
                 href="/agents"
-                className="px-10 py-4 font-mono text-sm font-medium border border-white/10 text-white/50 rounded-xl hover:text-white hover:border-white/20 transition-all"
+                className="group flex items-center gap-2 px-10 py-4 font-sans text-xs font-semibold tracking-wide uppercase border border-black/10 text-[#111111] rounded-xl hover:border-[#111111] transition-all duration-500"
               >
                 Browse Agents
+                <span className="transform group-hover:translate-x-1 transition-transform duration-500 text-black/30 group-hover:text-[#111111]">→</span>
               </Link>
             </div>
           </div>
         </motion.div>
       </section>
 
+      {/* ── FOUNDERS SECTION ──────────────────────────────────────────────── */}
+      <section className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-32 pt-16">
+        <div className="flex flex-col lg:flex-row gap-16 lg:gap-24">
+          
+          {/* Left Column: Title */}
+          <div className="lg:w-1/3 flex flex-col">
+            <div className="flex items-center gap-4 mb-8">
+              <span className="h-[1px] w-8 bg-black/30" />
+              <span className="font-sans text-xs font-semibold tracking-widest text-black/40 uppercase">Who We Are</span>
+            </div>
+            <h2 className="font-sans text-5xl md:text-7xl font-medium tracking-tight text-[#111111] leading-[0.9]">
+              The<br/><span className="text-black/30">Founders.</span>
+            </h2>
+          </div>
+
+          {/* Right Column: Founder Profiles */}
+          <div className="lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            {/* Founder 1 */}
+            <div className="group border border-[#111111] bg-white rounded-[20px] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)]">
+              <div className="w-full h-64 mb-8 overflow-hidden rounded-xl bg-[#fafafa]">
+                <img src="/Founder.png" alt="Sayan Roy" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out" />
+              </div>
+              <div>
+                <h3 className="font-sans text-3xl font-medium text-[#111111] tracking-tight mb-1 group-hover:text-[#799ee0] transition-colors duration-500">Sayan Roy</h3>
+                <span className="font-mono text-xs font-semibold tracking-widest text-black/40 uppercase mb-6 block">Founder</span>
+                
+                <div className="flex items-center gap-4 pt-6 border-t border-black/10">
+                  <Link href="#" className="font-sans text-xs font-semibold tracking-wide uppercase text-black/40 hover:text-[#799ee0] transition-colors">
+                    LinkedIn →
+                  </Link>
+                  <span className="text-black/10">·</span>
+                  <Link href="#" className="font-sans text-xs font-semibold tracking-wide uppercase text-black/40 hover:text-[#799ee0] transition-colors">
+                    X (Twitter) →
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Founder 2 */}
+            <div className="group border border-[#111111] bg-white rounded-[20px] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)]">
+              <div className="w-full h-64 mb-8 overflow-hidden rounded-xl bg-[#fafafa]">
+                <img src="/Co-Founder.png" alt="Satish Jalan" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out" />
+              </div>
+              <div>
+                <h3 className="font-sans text-3xl font-medium text-[#111111] tracking-tight mb-1 group-hover:text-[#799ee0] transition-colors duration-500">Satish Jalan</h3>
+                <span className="font-mono text-xs font-semibold tracking-widest text-black/40 uppercase mb-6 block">Co-Founder</span>
+                
+                <div className="flex items-center gap-4 pt-6 border-t border-black/10">
+                  <Link href="#" className="font-sans text-xs font-semibold tracking-wide uppercase text-black/40 hover:text-[#799ee0] transition-colors">
+                    LinkedIn →
+                  </Link>
+                  <span className="text-black/10">·</span>
+                  <Link href="#" className="font-sans text-xs font-semibold tracking-wide uppercase text-black/40 hover:text-[#799ee0] transition-colors">
+                    X (Twitter) →
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer className="w-full bg-[#799ee0] text-white pt-24 flex flex-col justify-between overflow-hidden relative" style={{ minHeight: '65vh' }}>
+        <div className="max-w-[1400px] w-full mx-auto px-6 lg:px-12 flex-grow">
+          
+          {/* Top Links Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-16">
+            
+            {/* Column 1 */}
+            <div className="flex flex-col">
+              <h4 className="font-sans text-[9px] font-bold tracking-[0.2em] uppercase mb-5 border-t border-white/30 pt-4 text-white">SOCIALS</h4>
+              <ul className="flex flex-col gap-2 font-sans text-xs text-white/80">
+                <li><Link href="#" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> Twitter / X</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0788.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg> Discord</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg> Youtube</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg> Telegram</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 2 */}
+            <div className="flex flex-col">
+              <h4 className="font-sans text-[9px] font-bold tracking-[0.2em] uppercase mb-5 border-t border-white/30 pt-4 text-white">ABOUT</h4>
+              <ul className="flex flex-col gap-2 font-sans text-xs text-white/80">
+                <li><Link href="#" className="hover:text-white transition-colors">Documentation</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Branding</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Official Links</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 3 */}
+            <div className="flex flex-col">
+              <h4 className="font-sans text-[9px] font-bold tracking-[0.2em] uppercase mb-5 border-t border-white/30 pt-4 text-white">RESOURCES</h4>
+              <ul className="flex flex-col gap-2 font-sans text-xs text-white/80">
+                <li><Link href="#" className="hover:text-white transition-colors">Agent Framework</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Stellar Payments</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Rust SDK</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Smart Contracts</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 4 */}
+            <div className="flex flex-col">
+              <h4 className="font-sans text-[9px] font-bold tracking-[0.2em] uppercase mb-5 border-t border-white/30 pt-4 text-white">CONTACT</h4>
+              <ul className="flex flex-col gap-2 font-sans text-xs text-white/80">
+                <li><Link href="#" className="hover:text-white transition-colors">Email</Link></li>
+                <li><Link href="#" className="hover:text-white transition-colors">Twitter (DM us!)</Link></li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Massive Text with overlaid copyright — text inside D curve like ROME's O */}
+        <div className="w-full relative overflow-hidden mt-auto" style={{ height: '15vw' }}>
+          <div className="absolute z-10 pointer-events-none" style={{ top: '20%', left: '50%', transform: 'translateX(-50%)' }}>
+        
+          </div>
+          <h1 className="text-[18vw] leading-none font-serif text-white text-center w-full whitespace-nowrap tracking-tighter">
+            VALDYUM
+          </h1>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -1,22 +1,22 @@
 //! Arbitrage Tracker — entry point.
 //!
-//! Detects and executes triangular arbitrage on the Stellar DEX (SDEX).
+//! Detects and executes multi-hop arbitrage opportunities on Solana via Jupiter.
 //!
-//! Strategy: find a cycle `A → B → C → A` where the product of exchange
-//! rates is > 1 (i.e. the round-trip yields more than you started with).
+//! Strategy: Query Jupiter for multi-hop swap routes and identify profitable
+//! cyclic paths (e.g. USDC → SOL → USDT → USDC) where execution yields profit.
 //!
 //! ## 0x402 Protocol
 //! Optionally enriches detection with paid market intelligence agents (token
 //! sentiment, volatility scores) via [`common::PaymentClient`].
 //!
 //! ## Pub-Sub
-//! Every arbitrage execution publishes to Kafka so dashboard/billing are
-//! updated in real time via [`common::KafkaPublisher`].
+//! Every arbitrage execution publishes to QStash so dashboard/billing are
+//! updated in real time via [`common::QStashPublisher`].
 //!
 //! ## Usage
 //! ```
 //! cp .env.template .env
-//! cargo run --release --bin arbitrage_tracker
+//! SOLANA_AGENT_SECRET=<base58-key> cargo run --release --bin arbitrage_tracker
 //! ```
 
 mod config;
@@ -24,7 +24,7 @@ mod detector;
 mod executor;
 
 use anyhow::Result;
-use common::{HorizonClient, KafkaPublisher, Keypair, PaymentClient};
+use common::{Keypair, PaymentClient, QStashPublisher};
 use tracing::info;
 
 #[tokio::main]
@@ -39,24 +39,24 @@ async fn main() -> Result<()> {
         .init();
 
     info!(
-        triangles = cfg.triangles.len(),
-        horizon   = %cfg.common.horizon_url,
-        "Arbitrage Tracker starting"
+        cluster  = %cfg.common.solana_cluster,
+        rpc      = %cfg.common.solana_rpc_url,
+        wallet   = %cfg.common.agent_wallet,
+        "Arbitrage Tracker (Jupiter) starting"
     );
 
-    let horizon  = HorizonClient::new(&cfg.common.horizon_url)?;
-    let keypair  = Keypair::from_secret(&cfg.common.agent_secret)?;
+    let keypair = Keypair::from_secret(&cfg.common.agent_secret)?;
 
     let _payment_client = PaymentClient::new(
         keypair.clone(),
-        &cfg.common.horizon_url,
-        &cfg.common.network_passphrase,
+        &cfg.common.solana_rpc_url,
+        "Solana",
     )?;
 
-    let kafka = KafkaPublisher::from_env();
+    let qstash = QStashPublisher::from_env();
 
     info!(address = %keypair.public_key, "Wallet loaded");
-    info!("0x402 + Kafka enabled for real-time billing and A2A intelligence");
+    info!("Jupiter routes + QStash enabled for real-time arbitrage detection");
 
-    detector::run_detection_loop(&cfg, &horizon, &keypair, &kafka).await
+    detector::run_detection_loop(&cfg, &keypair, &qstash).await
 }

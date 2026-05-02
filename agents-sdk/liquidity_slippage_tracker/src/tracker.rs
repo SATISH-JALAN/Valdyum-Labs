@@ -3,8 +3,8 @@
 use crate::{config::LiquidityConfig, slippage};
 use anyhow::Result;
 use common::{
-    pubsub::{now_iso, AgentActionEvent, ChainEvent},
-    HorizonClient, KafkaPublisher, OrderBook,
+    pubsub::{now_iso, AgentActionEvent, ChainEvent, TOPIC_AGENT_COMPLETED, TOPIC_CHAIN_SYNCED, TOPIC_MARKETPLACE_ACTIVITY},
+    HorizonClient, OrderBook, QStashPublisher,
 };
 use rust_decimal::prelude::ToPrimitive;
 use std::time::Duration;
@@ -43,7 +43,7 @@ pub struct SlippageEntry {
 pub async fn run(
     cfg:     &LiquidityConfig,
     horizon: &HorizonClient,
-    kafka:   &KafkaPublisher,
+    qstash:  &QStashPublisher,
 ) -> Result<()> {
     let interval = Duration::from_millis(cfg.poll_interval_ms);
     let mut consecutive_errors = 0u32;
@@ -55,7 +55,7 @@ pub async fn run(
     );
 
     loop {
-        match scan_all_pairs(cfg, horizon, kafka).await {
+        match scan_all_pairs(cfg, horizon, qstash).await {
             Ok(_)  => { consecutive_errors = 0; }
             Err(e) => {
                 consecutive_errors += 1;
@@ -71,7 +71,7 @@ pub async fn run(
 async fn scan_all_pairs(
     cfg:     &LiquidityConfig,
     horizon: &HorizonClient,
-    kafka:   &KafkaPublisher,
+    qstash:  &QStashPublisher,
 ) -> Result<()> {
     // Fetch all order books in parallel.
     let futures: Vec<_> = cfg.pairs.iter().map(|pair| {
@@ -92,7 +92,7 @@ async fn scan_all_pairs(
                     None => warn!("Could not compute snapshot for {}", pair.label),
                     Some(snap) => {
                         log_snapshot(&snap, cfg.verbose);
-                        publish_snapshot(kafka, &snap).await;
+                        publish_snapshot(qstash, &snap).await;
                     }
                 }
             }
@@ -184,9 +184,9 @@ fn log_snapshot(snap: &LiquiditySnapshot, verbose: bool) {
     }
 }
 
-async fn publish_snapshot(kafka: &KafkaPublisher, snap: &LiquiditySnapshot) {
+async fn publish_snapshot(qstash: &QStashPublisher, snap: &LiquiditySnapshot) {
     // Publish to marketplace activity feed for dashboard display.
-    kafka.publish_chain_event(&ChainEvent {
+    qstash.publish_json(TOPIC_CHAIN_SYNCED, &ChainEvent {
         event_type: "liquidity_snapshot".into(),
         tx_hash:    "n/a".into(),
         ledger:     0,
@@ -197,7 +197,7 @@ async fn publish_snapshot(kafka: &KafkaPublisher, snap: &LiquiditySnapshot) {
 
     // If there are active alerts, also publish as an agent action for urgency.
     if snap.low_liquidity_alert || snap.high_slippage_alert {
-        kafka.publish_action(&AgentActionEvent {
+        qstash.publish_json(TOPIC_AGENT_COMPLETED, &AgentActionEvent {
             agent_type:   "liquidity_slippage_tracker".into(),
             agent_wallet: "".into(),
             action:       if snap.low_liquidity_alert { "low_liquidity_alert" } else { "high_slippage_alert" }.into(),

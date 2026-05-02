@@ -23,7 +23,7 @@ mod config;
 mod monitor;
 
 use anyhow::Result;
-use common::{HorizonClient, KafkaPublisher, Keypair, PaymentClient};
+use common::{HorizonClient, Keypair, PaymentClient, QStashPublisher};
 use tracing::info;
 
 #[tokio::main]
@@ -39,20 +39,22 @@ async fn main() -> Result<()> {
 
     info!(
         horizon    = %cfg.common.horizon_url,
+        wallet     = %cfg.common.agent_wallet,
         rules      = cfg.alert_rules.len(),
         "Mempool Monitor starting"
     );
 
-    let horizon  = HorizonClient::new(&cfg.common.horizon_url)?;
+    // Solana Websocket monitoring
     let keypair  = Keypair::from_secret(&cfg.common.agent_secret)?;
+    let horizon  = HorizonClient::new(&cfg.common.horizon_url)?;
     let _payment = PaymentClient::new(
         keypair.clone(),
         &cfg.common.horizon_url,
         &cfg.common.network_passphrase,
     )?;
-    let kafka    = KafkaPublisher::from_env();
+    let qstash    = QStashPublisher::from_env();
 
     info!(address = %keypair.public_key, "Wallet loaded");
 
-    monitor::run(&cfg, &horizon, &kafka).await
+    monitor::run(&cfg, &horizon, &qstash).await
 }

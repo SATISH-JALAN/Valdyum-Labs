@@ -19,7 +19,8 @@ type RuntimeInfo = {
 };
 
 export default function AgentDetailPage() {
-  const { id } = useParams();
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? '';
   const router = useRouter();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import AgentCard from '@/components/AgentCard';
 import { Agent } from '@/types';
+import { sendSolTransfer, solExplorerTx } from '@/lib/phantom';
 
 interface ForkModalProps {
   agent: Agent;
@@ -22,43 +23,10 @@ function ForkModal({ agent, onClose, onSuccess }: ForkModalProps) {
     setStep('paying');
     setError(null);
     try {
-      const StellarSdk = await import('stellar-sdk');
-      const freighter = await import('@stellar/freighter-api');
-
-      const conn = await freighter.isConnected();
-      if (!conn.isConnected) throw new Error('Freighter wallet not installed. Visit https://www.freighter.app');
-
-      await freighter.requestAccess();
-      const { address: senderKey, error: addrError } = await freighter.getAddress();
-      if (addrError || !senderKey) throw new Error('Could not get wallet address from Freighter.');
-
-      const isMainnet = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet';
-      const horizonUrl = process.env.NEXT_PUBLIC_HORIZON_URL ||
-        (isMainnet ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org');
-      const networkPassphrase = isMainnet ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
-
-      const horizonServer = new StellarSdk.Horizon.Server(horizonUrl);
-      const senderAccount = await horizonServer.loadAccount(senderKey);
-
-      const memo = `fork:${agent.id}`.slice(0, 28);
-      const tx = new StellarSdk.TransactionBuilder(senderAccount, { fee: StellarSdk.BASE_FEE, networkPassphrase })
-        .addOperation(StellarSdk.Operation.payment({
-          destination: agent.owner_wallet,
-          asset: StellarSdk.Asset.native(),
-          amount: FORK_FEE_XLM.toFixed(7),
-        }))
-        .addMemo(StellarSdk.Memo.text(memo))
-        .setTimeout(60)
-        .build();
-
-      const signedResult = await freighter.signTransaction(tx.toXDR(), { networkPassphrase });
-      if (signedResult.error) throw new Error(String(signedResult.error));
-
-      const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedResult.signedTxXdr, networkPassphrase);
-      const result = await horizonServer.submitTransaction(signedTx);
+      const result = await sendSolTransfer(agent.owner_wallet, FORK_FEE_XLM);
 
       setStep('done');
-      onSuccess(result.hash);
+      onSuccess(result.txHash);
     } catch (err) {
       const msg = String(err);
       setError(msg.startsWith('Error:') ? msg.slice(7).trim() : msg);
@@ -72,7 +40,7 @@ function ForkModal({ agent, onClose, onSuccess }: ForkModalProps) {
         onClick={(e) => e.stopPropagation()}>
         <h2 className="font-syne text-xl font-bold text-white mb-1">Fork Agent</h2>
         <p className="text-gray-400 text-sm mb-5">
-          Pay <span className="text-[#FFB800] font-bold">{FORK_FEE_XLM} XLM</span> to fork &quot;{agent.name}&quot; and customise it.
+          Pay <span className="text-[#FFB800] font-bold">{FORK_FEE_XLM} SOL</span> to fork &quot;{agent.name}&quot; and customise it.
         </p>
 
         <div className="space-y-4 mb-5">
@@ -89,7 +57,7 @@ function ForkModal({ agent, onClose, onSuccess }: ForkModalProps) {
         </div>
 
         <div className="text-xs font-mono text-gray-500 mb-4 p-3 rounded bg-white/[0.02] border border-white/[0.06]">
-          <div className="flex justify-between"><span>Fork fee</span><span className="text-[#FFB800]">{FORK_FEE_XLM} XLM</span></div>
+          <div className="flex justify-between"><span>Fork fee</span><span className="text-[#FFB800]">{FORK_FEE_XLM} SOL</span></div>
           <div className="flex justify-between mt-1"><span>Destination</span><span className="text-white/70 truncate max-w-[200px]">{agent.owner_wallet}</span></div>
         </div>
 
@@ -109,7 +77,7 @@ function ForkModal({ agent, onClose, onSuccess }: ForkModalProps) {
           </button>
           <button onClick={handleFork} disabled={step === 'paying' || step === 'done'}
             className="flex-1 py-2.5 text-sm font-mono bg-[#FFB800] text-black rounded-lg font-bold hover:bg-[#e6a600] transition-colors disabled:opacity-50">
-            {step === 'paying' ? 'Processing...' : step === 'done' ? 'Forked!' : `Fork & Pay ${FORK_FEE_XLM} XLM`}
+            {step === 'paying' ? 'Processing...' : step === 'done' ? 'Forked!' : `Fork & Pay ${FORK_FEE_XLM} SOL`}
           </button>
         </div>
       </div>
@@ -148,13 +116,13 @@ export default function MarketplacePage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-syne text-4xl font-bold text-white mb-2">Marketplace</h1>
           <p className="text-gray-400 font-mono text-sm">
-            Discover, buy, and fork AI agents on AgentForge. All payments in XLM via the 0x402 protocol.
+            Discover, buy, and fork AI agents on AgentForge. All payments in SOL via the 0x402 protocol.
           </p>
         </motion.div>
 
         {forkSuccess && (
           <div className="p-4 rounded-xl bg-[rgba(74,222,128,0.08)] border border-green-900 text-[#4ade80] font-mono text-sm">
-            ✓ Fork payment confirmed · Tx: <a href={`https://stellar.expert/explorer/testnet/tx/${forkSuccess}`}
+            ✓ Fork payment confirmed · Tx: <a href={solExplorerTx(forkSuccess)}
               target="_blank" rel="noreferrer" className="underline hover:text-green-300">{forkSuccess.slice(0, 20)}...</a>
           </div>
         )}

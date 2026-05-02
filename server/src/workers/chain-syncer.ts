@@ -10,11 +10,11 @@
  */
 
 import { createConsumer, publish } from '../services/qstash';
-import { watchAccountTransactions } from '../services/stellar';
+import { watchAccountTransactions } from '../services/solana-watcher';
 import { TOPICS, type ChainSyncedEvent } from '@valdyum/shared';
 
 const CONSUMER_GROUP = 'valdyum-chain-syncer';
-const CONTRACT_ID = process.env.NEXT_PUBLIC_SOROBAN_CONTRACT_ID || '';
+const CONTRACT_ID = process.env.NEXT_PUBLIC_SOLANA_PROGRAM_ID || process.env.SOLANA_PROGRAM_ID || '';
 
 /**
  * Start the Horizon SSE watcher for the Soroban contract account and re-publish
@@ -22,11 +22,11 @@ const CONTRACT_ID = process.env.NEXT_PUBLIC_SOROBAN_CONTRACT_ID || '';
  */
 export function startChainSyncerStream(): () => void {
   if (!CONTRACT_ID) {
-    console.warn('[ChainSyncer] NEXT_PUBLIC_SOROBAN_CONTRACT_ID is not set – chain syncer disabled.');
+    console.warn('[ChainSyncer] NEXT_PUBLIC_SOLANA_PROGRAM_ID is not set – chain syncer disabled.');
     return () => undefined;
   }
 
-  console.log(`[ChainSyncer] Watching Horizon for contract account ${CONTRACT_ID}`);
+  console.log(`[ChainSyncer] Watching Solana for program account ${CONTRACT_ID}`);
 
   const close = watchAccountTransactions(CONTRACT_ID, async (tx: any) => {
     const event: ChainSyncedEvent = {

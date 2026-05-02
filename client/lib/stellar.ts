@@ -1,7 +1,9 @@
-import { Horizon } from "stellar-sdk";
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 
-const HORIZON_URL =
-  process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
+const SOLANA_CLUSTER = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || "testnet";
+const SOLANA_RPC_URL =
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL
+  || (SOLANA_CLUSTER === "mainnet-beta" ? "https://api.mainnet-beta.solana.com" : "https://api.testnet.solana.com");
 
 export function truncateAddress(address: string, chars = 4): string {
   if (!address || address.length <= chars * 2 + 3) return address;
@@ -10,10 +12,10 @@ export function truncateAddress(address: string, chars = 4): string {
 
 export async function getXlmBalance(address: string): Promise<string> {
   try {
-    const server = new Horizon.Server(HORIZON_URL);
-    const account = await server.loadAccount(address);
-    const native = account.balances.find((b) => b.asset_type === "native");
-    return native?.balance ?? "0";
+    const conn = new Connection(SOLANA_RPC_URL, "confirmed");
+    const pk = new PublicKey(address);
+    const lamports = await conn.getBalance(pk, "confirmed");
+    return (lamports / LAMPORTS_PER_SOL).toFixed(6);
   } catch {
     return "0";
   }
@@ -21,10 +23,12 @@ export async function getXlmBalance(address: string): Promise<string> {
 
 export async function fundTestAccount(address: string): Promise<boolean> {
   try {
-    const response = await fetch(
-      `https://friendbot.stellar.org/?addr=${encodeURIComponent(address)}`,
-    );
-    return response.ok;
+    const conn = new Connection(SOLANA_RPC_URL, "confirmed");
+    const pk = new PublicKey(address);
+    const sig = await conn.requestAirdrop(pk, 1 * LAMPORTS_PER_SOL);
+    const latest = await conn.getLatestBlockhash();
+    await conn.confirmTransaction({ signature: sig, ...latest }, "confirmed");
+    return true;
   } catch {
     return false;
   }

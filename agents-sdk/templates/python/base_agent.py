@@ -1,5 +1,5 @@
 """
-AgentForge LangGraph Base Agent Template
+Valdyum Labs LangGraph Base Agent Template
 Provides the common 0x402 payment-gated LangGraph workflow pattern.
 """
 
@@ -16,9 +16,19 @@ import requests
 
 load_dotenv()
 
-AGENTFORGE_API_URL = os.getenv("AGENTFORGE_API_URL", "http://localhost:3000")
-STELLAR_AGENT_SECRET = os.getenv("STELLAR_AGENT_SECRET", "")
+VALDYUM_API_URL = os.getenv("VALDYUM_API_URL", os.getenv("AGENTFORGE_API_URL", "http://localhost:3000"))
+HELIUS_API_KEY = os.getenv("HELIUS_API_KEY", "")
+HELIUS_RPC_URL = os.getenv("HELIUS_RPC_URL", "")
+SOLANA_RPC_URL = os.getenv("SOLANA_RPC_URL", HELIUS_RPC_URL or "https://api.testnet.solana.com")
+SOLANA_CLUSTER = os.getenv("SOLANA_CLUSTER", "testnet")
+SOLANA_AGENT_SECRET = os.getenv("SOLANA_AGENT_SECRET", "")
+SOLANA_AGENT_WALLET = os.getenv("SOLANA_AGENT_WALLET", "")
+QSTASH_URL = os.getenv("QSTASH_URL", "https://qstash.upstash.io")
+QSTASH_TOKEN = os.getenv("QSTASH_TOKEN", "")
+PLATFORM_API_URL = os.getenv("PLATFORM_API_URL", "http://localhost:3000")
+JUPITER_API_KEY = os.getenv("JUPITER_API_KEY", "")
 ABLY_API_KEY = os.getenv("ABLY_API_KEY", "")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", os.getenv("NEXT_PUBLIC_WEBHOOK_URL", ""))
 
 
 class AgentState(TypedDict):
@@ -32,6 +42,11 @@ class AgentState(TypedDict):
     payment_address: str
     error: Optional[str]
     steps: List[str]
+
+
+def get_default_wallet_address() -> str:
+    """Return the default wallet address used for Solana payment headers."""
+    return SOLANA_AGENT_WALLET or SOLANA_AGENT_SECRET or ""
 
 
 def build_model(model_name: str = "openai-gpt4o-mini"):
@@ -50,14 +65,19 @@ def create_run_node(agent_id: str, system_prompt: str, model_name: str = "openai
 
     def run_node(state: AgentState) -> AgentState:
         headers = {"Content-Type": "application/json"}
-        if state.get("wallet_address"):
-            headers["X-Payment-Wallet"] = state["wallet_address"]
+        wallet_address = state.get("wallet_address") or get_default_wallet_address()
+        if wallet_address:
+            headers["X-Payment-Wallet"] = wallet_address
+            headers["X-Solana-Payment-Wallet"] = wallet_address
+        if WEBHOOK_URL:
+            headers["X-Webhook-Url"] = WEBHOOK_URL
         if state.get("tx_hash"):
             headers["X-Payment-Tx-Hash"] = state["tx_hash"]
+            headers["X-Solana-Payment-Signature"] = state["tx_hash"]
 
         try:
             resp = requests.post(
-                f"{AGENTFORGE_API_URL}/api/agents/{agent_id}/run",
+                f"{VALDYUM_API_URL}/api/agents/{agent_id}/run",
                 headers=headers,
                 json={"input": state["input"]},
                 timeout=30,
@@ -147,13 +167,13 @@ if __name__ == "__main__":
     # Example: run a single agent
     agent_app = build_single_agent_graph(
         agent_id="1",
-        system_prompt="You are a DeFi analyst.",
+        system_prompt="You are a Solana DeFi analyst.",
     )
     result = agent_app.invoke({
-        "input": "Analyze current XLM/USDC liquidity",
+        "input": "Analyze current SOL/USDC liquidity",
         "output": "",
         "agent_id": "1",
-        "wallet_address": "",
+        "wallet_address": get_default_wallet_address(),
         "tx_hash": None,
         "payment_required": False,
         "payment_amount": 0.0,

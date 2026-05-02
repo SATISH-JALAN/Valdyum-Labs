@@ -21,7 +21,7 @@ mod config;
 mod relay;
 
 use anyhow::Result;
-use common::{HorizonClient, KafkaPublisher, Keypair};
+use common::{HorizonClient, Keypair, QStashPublisher};
 use tracing::info;
 
 #[tokio::main]
@@ -37,15 +37,17 @@ async fn main() -> Result<()> {
 
     info!(
         horizon  = %cfg.common.horizon_url,
+        wallet   = %cfg.common.agent_wallet,
         fee_bump = cfg.fee_bump_enabled,
         "Relayer starting"
     );
 
-    let horizon = HorizonClient::new(&cfg.common.horizon_url)?;
+    // Solana transaction relay
     let keypair = Keypair::from_secret(&cfg.common.agent_secret)?;
-    let kafka   = KafkaPublisher::from_env();
+    let horizon = HorizonClient::new(&cfg.common.horizon_url)?;
+    let qstash   = QStashPublisher::from_env();
 
     info!(address = %keypair.public_key, "Fee-payer wallet loaded");
 
-    relay::run_relay_loop(&cfg, &horizon, &keypair, &kafka).await
+    relay::run_relay_loop(&cfg, &horizon, &keypair, &qstash).await
 }

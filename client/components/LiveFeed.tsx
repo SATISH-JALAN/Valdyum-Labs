@@ -6,15 +6,15 @@ import { truncateAddress } from '@/lib/stellar';
 import type { MarketplaceActivityEvent } from '@/types/events';
 
 const TYPE_STYLES: Record<MarketplaceActivityEvent['eventType'], string> = {
-  agent_run: 'text-[#00FFE5]',
-  payment_received: 'text-[#4ade80]',
-  new_agent: 'text-[#f59e0b]',
+  agent_run: 'text-[#111111]',
+  payment_received: 'text-[#799ee0]',
+  new_agent: 'text-black/50',
 };
 
 const TYPE_BADGES: Record<MarketplaceActivityEvent['eventType'], string> = {
-  agent_run: 'bg-[rgba(0,255,229,0.1)] border-[rgba(0,255,229,0.3)] text-[#00FFE5]',
-  payment_received: 'bg-[rgba(74,222,128,0.1)] border-[rgba(74,222,128,0.3)] text-[#4ade80]',
-  new_agent: 'bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.3)] text-[#f59e0b]',
+  agent_run: 'bg-black/5 border-black/10 text-black/60',
+  payment_received: 'bg-[#799ee0]/10 border-[#799ee0]/30 text-[#799ee0]',
+  new_agent: 'bg-black/5 border-black/10 text-black/50',
 };
 
 function formatEventLabel(ev: MarketplaceActivityEvent): string {
@@ -33,21 +33,21 @@ export default function LiveFeed() {
   const { events, isConnected } = useMarketplaceFeed({ maxEvents: 12 });
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-[rgba(5,5,8,0.85)] backdrop-blur-xl overflow-hidden">
+    <div className="rounded-[20px] border border-black/10 bg-white shadow-[0_15px_40px_rgba(0,0,0,0.04)] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#00FFE5] animate-pulse' : 'bg-amber-400'}`} />
-          <span className="font-mono text-xs text-white/70">Live Activity</span>
-          <span className="font-mono text-[10px] text-white/30 ml-1">ably://marketplace</span>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 bg-[#fafafa]">
+        <div className="flex items-center gap-3">
+          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#799ee0] animate-pulse' : 'bg-amber-400'}`} />
+          <span className="font-sans font-medium text-sm text-[#111111]">Live Activity</span>
+          <span className="font-mono text-[10px] text-black/30 ml-2 hidden sm:inline">ably://marketplace</span>
         </div>
-        <span className="font-mono text-[10px] text-white/30">{isConnected ? 'connected' : 'connecting'} · 0x402 · Stellar</span>
+        <span className="font-mono text-[10px] text-black/40 uppercase tracking-wider">{isConnected ? 'connected' : 'connecting'} · 0x402 · Stellar</span>
       </div>
 
       {/* Feed rows */}
-      <div className="divide-y divide-white/[0.03]">
+      <div className="divide-y divide-black/5">
         {events.length === 0 && (
-          <div className="px-5 py-4 font-mono text-xs text-white/40">No activity yet. Run an agent request to see realtime events.</div>
+          <div className="px-6 py-8 text-center font-sans text-sm text-black/40">No activity yet. Run an agent request to see realtime events.</div>
         )}
         <AnimatePresence initial={false}>
           {events.map((ev, idx) => (
@@ -57,35 +57,35 @@ export default function LiveFeed() {
               animate={{ opacity: 1,  y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="flex items-start gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors"
+              className="flex items-start gap-4 px-6 py-4 hover:bg-[#fafafa] transition-colors"
             >
               {/* Badge */}
-              <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[9px] font-mono border uppercase tracking-wide ${TYPE_BADGES[ev.eventType]}`}>
+              <span className={`mt-0.5 shrink-0 px-2 py-0.5 rounded text-[10px] font-mono border uppercase tracking-wider ${TYPE_BADGES[ev.eventType]}`}>
                 {ev.eventType.replace('_', '\u00A0')}
               </span>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className={`font-mono text-xs font-semibold ${TYPE_STYLES[ev.eventType]}`}>
+                <div className="flex items-baseline gap-2 flex-wrap mb-1">
+                  <span className={`font-mono text-[13px] font-semibold tracking-tight ${TYPE_STYLES[ev.eventType]}`}>
                     {formatEventLabel(ev)}
                   </span>
                   {typeof ev.priceXlm === 'number' && ev.priceXlm > 0 && (
-                    <span className="font-mono text-[10px] text-[#4ade80]">
+                    <span className="font-mono text-[11px] font-medium text-[#799ee0]">
                       +{ev.priceXlm.toFixed(2)} XLM
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="font-mono text-[10px] text-white/20">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] text-black/50">
                     {ev.agentName} ({ev.agentId.slice(0, 8)}...)
                   </span>
-                  <span className="text-white/10">·</span>
-                  <span className="font-mono text-[10px] text-white/20">
+                  <span className="text-black/20">·</span>
+                  <span className="font-mono text-[11px] text-black/50">
                     wallet:{truncateAddress(ev.callerWallet || ev.ownerWallet, 5)}
                   </span>
-                  <span className="text-white/10">·</span>
-                  <span className="font-mono text-[10px] text-white/20">{formatTime(ev.timestamp)}</span>
+                  <span className="text-black/20">·</span>
+                  <span className="font-mono text-[11px] text-black/40">{formatTime(ev.timestamp)}</span>
                 </div>
               </div>
             </motion.div>

@@ -89,6 +89,7 @@ impl QStashPublisher {
             .unwrap_or_else(|_| "https://qstash.upstash.io".to_string());
         let qstash_token = std::env::var("QSTASH_TOKEN").unwrap_or_default();
         let platform_url = std::env::var("PLATFORM_API_URL")
+            .or_else(|_| std::env::var("VALDYUM_API_URL"))
             .unwrap_or_else(|_| "http://localhost:3000".to_string())
             .trim_end_matches('/')
             .to_string();
@@ -121,7 +122,7 @@ impl QStashPublisher {
     ///
     /// Fire-and-forget: errors are logged as warnings but do **not** propagate
     /// to the caller — a publish failure must never abort a trade.
-    pub async fn publish<T: Serialize>(&self, topic: &str, payload: &T) {
+    pub async fn publish_json<T: Serialize>(&self, topic: &str, payload: &T) {
         if !self.enabled { return; }
 
         let slug = Self::topic_to_slug(topic);
@@ -152,6 +153,11 @@ impl QStashPublisher {
         }
     }
 
+    /// Backward-compatible alias for older call sites.
+    pub async fn publish<T: Serialize>(&self, topic: &str, payload: &T) {
+        self.publish_json(topic, payload).await;
+    }
+
     /// Convenience: publish an [`AgentActionEvent`].
     pub async fn publish_action(&self, evt: &AgentActionEvent) {
         self.publish(TOPIC_AGENT_COMPLETED, evt).await;
@@ -169,9 +175,6 @@ impl QStashPublisher {
         self.publish(TOPIC_CHAIN_SYNCED, evt).await;
     }
 }
-
-/// Backward-compat alias for older modules that still import `KafkaPublisher`.
-pub type KafkaPublisher = QStashPublisher;
 
 // ── Timestamp helper ──────────────────────────────────────────────────────────
 

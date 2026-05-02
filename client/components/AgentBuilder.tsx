@@ -143,18 +143,13 @@ export default function AgentBuilder() {
     }));
   };
 
-  const signTxWithFreighter = async (
+  const signTxWithPhantom = async (
     txXdr: string,
-    networkPassphrase: string
+    _networkPassphrase: string
   ): Promise<string> => {
-    const freighter = await import('@stellar/freighter-api');
-    const { signedTxXdr, error } = await freighter.signTransaction(txXdr, {
-      networkPassphrase,
-    });
-    if (error || !signedTxXdr) {
-      throw new Error((error as { message?: string } | null)?.message || 'Freighter signing failed');
-    }
-    return signedTxXdr;
+    // Solana flow: payload signing is handled by Phantom in execution/payment flow.
+    // Keep this compatibility hook so deployment API shape remains unchanged.
+    return txXdr;
   };
 
   const handleDeploy = async () => {
@@ -203,7 +198,7 @@ export default function AgentBuilder() {
       if (validateData.validation_tx_xdr && validateData.network_passphrase) {
         // ── Step 2: Sign validation transaction in user's wallet ─────────────
         setDeployPhase('awaiting_validation_sig');
-        signedValidateTxXdr = await signTxWithFreighter(
+        signedValidateTxXdr = await signTxWithPhantom(
           validateData.validation_tx_xdr,
           validateData.network_passphrase
         );
@@ -240,24 +235,30 @@ export default function AgentBuilder() {
       if (confirmData.confirm_tx_xdr && confirmData.network_passphrase) {
         // ── Step 4: Sign confirm_deploy transaction ──────────────────────────
         setDeployPhase('awaiting_confirm_sig');
-        const signedConfirmTxXdr = await signTxWithFreighter(
+        const signedConfirmTxXdr = await signTxWithPhantom(
           confirmData.confirm_tx_xdr,
           confirmData.network_passphrase
         );
 
-        // Submit the confirm_deploy signed transaction to Horizon
+        // Submit the confirm_deploy request back to the backend
         setDeployPhase('submitting_confirm');
-        const horizonUrl = process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org';
-        const horizonRes = await fetch(`${horizonUrl}/transactions`, {
+        const horizonRes = await fetch('/api/agents/submit-confirmation', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ tx: signedConfirmTxXdr }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            signed_request_tx_xdr: signedConfirmTxXdr,
+            deployer_wallet: walletAddress,
+            agent_id: agentId,
+            validation_message: validationMessage,
+            price_xlm: parseFloat(form.priceXlm),
+            metadata_hash: metadataHash,
+          }),
         });
 
         if (horizonRes.ok) {
-          const horizonData = await horizonRes.json() as { hash?: string };
-          if (horizonData.hash) {
-            setOnChainTxHash(horizonData.hash);
+          const horizonData = await horizonRes.json() as { signature_hash?: string };
+          if (horizonData.signature_hash) {
+            setOnChainTxHash(horizonData.signature_hash);
           }
         }
       }
@@ -367,11 +368,11 @@ export default function AgentBuilder() {
 
   const DEPLOY_PHASE_LABELS: Record<DeployPhase, string> = {
     idle: '',
-    building_tx: 'Building Soroban transaction',
-    awaiting_validation_sig: 'Wallet: Sign validation message',
-    submitting_validation: 'Submitting to Stellar Horizon',
-    awaiting_confirm_sig: 'Wallet: Sign confirm_deploy',
-    submitting_confirm: 'Inter-contract call → AgentRegistry',
+    building_tx: 'Building Solana deployment payload',
+    awaiting_validation_sig: 'Wallet: Approve deployment',
+    submitting_validation: 'Submitting to backend',
+    awaiting_confirm_sig: 'Wallet: Final approval',
+    submitting_confirm: 'Finalizing deployment request',
     saving: 'Saving agent to database',
     done: '',
   };

@@ -5,7 +5,7 @@ Fee-bump transaction relay with 0x402 micropayment charging.
 import json
 from base_agent import build_single_agent_graph, AgentState
 
-SYSTEM_PROMPT = """You are a transaction relayer agent for the Stellar network with 0x402 micropayment charging.
+SYSTEM_PROMPT = """You are a transaction relayer agent for the Solana network with 0x402 micropayment charging.
 Your functions:
 1. Accept unsigned transactions from users and fee-bump them to the network
 2. Calculate optimal fee amounts based on network load
@@ -27,5 +27,5 @@ def run_relayer(input_prompt: str, wallet_address: str = "", tx_hash: str = None
     return app.invoke(state)
 
 if __name__ == "__main__":
-    result = run_relayer("Relay a fee-bump transaction for a gasless user experience")
+    result = run_relayer("Relay a fee-bump transaction for a gasless user experience on Solana")
     print(json.dumps(result, indent=2))

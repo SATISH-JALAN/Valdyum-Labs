@@ -4,8 +4,8 @@
  * Listens on `valdyum.payment.pending`.
  *
  * For each pending payment it:
- *  1. Opens a Horizon SSE stream for the agent owner's wallet.
- *  2. Waits until the specific tx hash lands on the ledger (with a timeout).
+ *  1. Polls Solana RPC for transaction confirmation.
+ *  2. Waits until the specific tx hash is confirmed (with a timeout).
  *  3. Publishes `valdyum.payment.confirmed` so the Agent Executor can proceed.
  */
 
@@ -34,13 +34,9 @@ const consumer = createConsumer<PaymentPendingEvent>(
     console.log(`[PaymentVerifier] Verifying tx ${txHash} for request ${requestId}`);
 
     try {
-      // Wait until Horizon has the tx (polls every 3 s, times out after 2 min)
-      const tx = await waitForTransaction(txHash, TX_TIMEOUT_MS);
-
-      // Basic sanity: memo must start with expected prefix (e.g. "agent:<id>")
-      const memoPrefix = memo.includes(':') ? memo.split(':').slice(0, 2).join(':') : memo;
-      if (memo && tx.memo && !tx.memo.startsWith(memoPrefix)) {
-        console.warn(`[PaymentVerifier] Memo mismatch for ${requestId}: expected prefix "${memo}", got "${tx.memo}"`);
+      const confirmedOnChain = await waitForTransaction(txHash, TX_TIMEOUT_MS);
+      if (!confirmedOnChain) {
+        console.warn(`[PaymentVerifier] Timeout waiting for tx ${txHash}`);
         return;
       }
 

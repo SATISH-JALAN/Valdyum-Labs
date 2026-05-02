@@ -9,7 +9,9 @@
     "./types": "./src/types/index.ts",
     "./types/events": "./src/types/events.ts",
     "./constants/topics": "./src/constants/topics.ts",
-    "./utils/stellar": "./src/utils/stellar.ts"
+    "./utils/solana": "./src/utils/solana.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@solana/web3.js": "^1.83.0"
+  }
 }

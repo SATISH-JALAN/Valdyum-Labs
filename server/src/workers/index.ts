@@ -9,7 +9,7 @@
  *   • Agent Executor
  *   • Billing Aggregator
  *   • Marketplace Feed (two sub-consumers)
- *   • Chain Syncer (qstash consumer + Horizon SSE stream)
+ *   • Chain Syncer (qstash consumer + Solana RPC poller)
  *   • A2A Router
  */
 
@@ -36,7 +36,7 @@ for (const c of consumers) {
   c.start();
 }
 
-// Start the Horizon SSE stream (returns a close fn)
+// Start the Solana chain stream (returns a close fn)
 const stopChainStream = startChainSyncerStream();
 
 // Graceful shutdown

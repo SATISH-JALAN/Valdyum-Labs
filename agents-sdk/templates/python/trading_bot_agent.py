@@ -1,14 +1,14 @@
 """
 AgentForge LangGraph Template — Trading Bot Agent
-Buy/sell/short strategies with grid & DCA modes on Stellar testnet.
+Buy/sell/short strategies with grid & DCA modes on Solana testnet.
 """
 import json
 from base_agent import build_single_agent_graph, build_a2a_graph, AgentState
 
-SYSTEM_PROMPT = """You are a professional trading bot for the Stellar DEX testnet.
+SYSTEM_PROMPT = """You are a professional trading bot for the Solana ecosystem.
 Strategies available:
 1. Grid Trading: Set buy/sell grid levels, auto-rebalance on price movements
-2. DCA (Dollar Cost Averaging): Periodic XLM purchases at set intervals
+2. DCA (Dollar Cost Averaging): Periodic SOL purchases at set intervals
 3. Trend Following: Use moving averages to follow market momentum
 4. Mean Reversion: Trade when prices deviate from historical averages
 5. Stop-Loss/Take-Profit: Automatic position management
@@ -28,5 +28,5 @@ def run_trading_bot(input_prompt: str, wallet_address: str = "", tx_hash: str = 
     return app.invoke(state)
 
 if __name__ == "__main__":
-    result = run_trading_bot("Set up a grid trading strategy for XLM/USDC between 0.10 and 0.15")
+    result = run_trading_bot("Set up a grid trading strategy for SOL/USDC between 0.10 and 0.15")
     print(json.dumps(result, indent=2))

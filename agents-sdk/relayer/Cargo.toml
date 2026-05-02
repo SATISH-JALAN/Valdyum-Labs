@@ -1,6 +1,6 @@
 [package]
 name        = "relayer"
-description = "Stellar transaction relayer with fee-bump and sequence management"
+description = "Solana cross-program transaction relay and coordination"
 version.workspace   = true
 edition.workspace   = true
 authors.workspace   = true

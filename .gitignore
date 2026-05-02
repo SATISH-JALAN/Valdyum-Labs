@@ -15,7 +15,6 @@ client/out/
 /build
 client/build
 server/dist
-client/reference 
 # misc
 .DS_Store
 *.pem

@@ -35,7 +35,14 @@ app.use(cors({
 // ─── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'valdyum-server', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'valdyum-server',
+    timestamp: new Date().toISOString(),
+    facilitatorUrl: process.env.PAYAI_FACILITATOR_URL || 'https://facilitator.payai.network',
+    chain: 'solana',
+    cluster: process.env.SOLANA_CLUSTER || process.env.NEXT_PUBLIC_SOLANA_CLUSTER || 'testnet',
+  });
 });
 
 import agentsRouter from './routes/agents';
@@ -44,6 +51,7 @@ import ablyRouter from './routes/ably';
 import dashboardRouter from './routes/dashboard';
 import faucetRouter from './routes/faucet';
 import paymentRouter from './routes/payment';
+import clawcreditRouter from './routes/clawcredit';
 
 app.use('/api/agents', agentsDeployRouter);
 app.use('/api/agents', agentsRouter);
@@ -51,6 +59,7 @@ app.use('/api/ably', ablyRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/faucet', faucetRouter);
 app.use('/api/payment', paymentRouter);
+app.use('/api/clawcredit', clawcreditRouter);
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 

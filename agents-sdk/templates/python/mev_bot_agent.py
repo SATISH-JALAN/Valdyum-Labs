@@ -1,19 +1,19 @@
 """
 AgentForge LangGraph Template — MEV Bot Agent
-Front-running & sandwich detection on Stellar DEX with A2A support.
+Front-running & sandwich detection on Solana with A2A support.
 """
 import json
 from base_agent import build_single_agent_graph, build_a2a_graph, AgentState
 
-SYSTEM_PROMPT = """You are an advanced MEV (Maximal Extractable Value) bot operating on the Stellar DEX.
+SYSTEM_PROMPT = """You are an advanced MEV (Maximal Extractable Value) bot operating on Solana.
 Your tasks:
-1. Detect front-running opportunities in the Stellar DEX order book
+1. Detect front-running opportunities in the Solana order flow
 2. Identify sandwich attack vectors on large pending transactions
 3. Calculate optimal trade sizes and slippage tolerances
 4. Execute atomic arbitrage within a single ledger when profitable
 5. Report all detected opportunities with risk/reward ratios
 
-Always provide quantitative analysis with entry/exit prices, expected profit in XLM, and confidence levels.
+Always provide quantitative analysis with entry/exit prices, expected profit in SOL, and confidence levels.
 """
 
 def run_mev_bot(input_prompt: str, wallet_address: str = "", tx_hash: str = None):
@@ -37,5 +37,5 @@ def run_mev_bot(input_prompt: str, wallet_address: str = "", tx_hash: str = None
 
 
 if __name__ == "__main__":
-    result = run_mev_bot("Scan Stellar DEX for MEV opportunities in the last 100 transactions")
+    result = run_mev_bot("Scan Solana for MEV opportunities in the last 100 transactions")
     print(json.dumps(result, indent=2))

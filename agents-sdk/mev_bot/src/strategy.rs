@@ -18,11 +18,13 @@ use crate::{
     executor,
 };
 use anyhow::Result;
-use common::{HorizonClient, Keypair, OrderBook};
+use common::{HorizonClient, OrderBook, QStashPublisher};
+use solana_sdk::signature::{Keypair, Signer};
 use rust_decimal::prelude::ToPrimitive;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, info, warn};
+use common::{AgentActionEvent, now_iso};
 
 // ── Opportunity ───────────────────────────────────────────────────────────────
 
@@ -48,9 +50,9 @@ pub struct Opportunity {
 pub async fn scan_loop(
     cfg:            &MevBotConfig,
     horizon:        &HorizonClient,
+    rpc:            &crate::rpc::RpcClient,
     keypair:        &Keypair,
-    _payment_client: &common::PaymentClient,
-    kafka:          &common::KafkaPublisher,
+    qstash:         &QStashPublisher,
 ) -> Result<()> {
     let interval = Duration::from_millis(cfg.poll_interval_ms);
     let mut consecutive_errors: u32 = 0;
@@ -58,12 +60,12 @@ pub async fn scan_loop(
     info!(
         interval_ms = cfg.poll_interval_ms,
         pairs        = cfg.pairs.len(),
-        min_profit   = cfg.min_profit_xlm,
+        min_profit   = cfg.min_profit_sol,
         "Scan loop started"
     );
 
     loop {
-        match scan_once(cfg, horizon, keypair, kafka).await {
+        match scan_once(cfg, horizon, rpc, keypair, qstash).await {
             Ok(opportunities_taken) => {
                 if opportunities_taken > 0 {
                     info!("{opportunities_taken} MEV opportunit(ies) executed this cycle");
@@ -88,11 +90,10 @@ pub async fn scan_loop(
 async fn scan_once(
     cfg:     &MevBotConfig,
     horizon: &HorizonClient,
+    rpc:     &crate::rpc::RpcClient,
     keypair: &Keypair,
-    kafka:   &common::KafkaPublisher,
+    qstash:  &QStashPublisher,
 ) -> Result<u32> {
-    use common::pubsub::{now_iso, AgentActionEvent};
-
     let mut executed = 0u32;
 
     // Fetch all order books in parallel for minimum latency.
@@ -102,8 +103,8 @@ async fn scan_once(
         .enumerate()
         .map(|(i, pair)| {
             let h = horizon.clone();
-            let sell = pair.sell_asset.clone();
-            let buy  = pair.buy_asset.clone();
+            let sell = common::Asset::native();
+            let buy  = common::Asset::native();
             async move {
                 h.get_order_book(&sell, &buy, cfg.depth_levels as u32 + 5)
                  .await
@@ -126,17 +127,17 @@ async fn scan_once(
                         "Opportunity detected"
                     );
 
-                    match executor::execute(cfg, horizon, keypair, &opp, i).await {
+                    match executor::execute(cfg, rpc, keypair, &opp, i).await {
                         Ok(hash) => {
                             info!(tx = %hash, profit = opp.estimated_profit, "MEV trade submitted");
 
                             // Publish the trade event to Kafka so the AgentForge
                             // dashboard and billing system reflect the earnings.
-                            kafka.publish_action(&AgentActionEvent {
+                            qstash.publish_action(&AgentActionEvent {
                                 agent_type:   "mev_bot".into(),
-                                agent_wallet: keypair.public_key.clone(),
+                                agent_wallet: keypair.pubkey().to_string(),
                                 action:       if opp.buy_pressure { "front_buy" } else { "front_sell" }.into(),
-                                asset_pair:   cfg.pairs.get(i).map(|p| format!("{}/{}", p.sell_asset, p.buy_asset)),
+                                asset_pair:   cfg.pairs.get(i).map(|p| format!("{}/{}", p.sell_mint, p.buy_mint)),
                                 tx_hash:      Some(hash),
                                 profit_xlm:   Some(opp.estimated_profit),
                                 latency_ms:   None,
@@ -177,7 +178,7 @@ fn analyse_book(ob: &OrderBook, pair_idx: usize, cfg: &MevBotConfig) -> Option<O
 
     // Opportunity size: smaller of our max position and half the imbalanced depth
     let imbalanced_depth = if buy_pressure { bid_depth } else { ask_depth };
-    let opportunity_size = (imbalanced_depth * 0.5).min(cfg.max_position_xlm);
+            let opportunity_size = (imbalanced_depth * 0.5).min(cfg.max_position_sol);
 
     // Estimated profit: capture spread minus 2× fee (entry + exit) minus slippage buffer
     let fee_xlm = (cfg.common.base_fee_stroops as f64 * 2.0) / 10_000_000.0;
@@ -185,7 +186,7 @@ fn analyse_book(ob: &OrderBook, pair_idx: usize, cfg: &MevBotConfig) -> Option<O
     let gross_profit = opportunity_size * (spread / 10_000.0); // spread in bps → fraction
     let estimated_profit = gross_profit - fee_xlm * 2.0 - slippage_buffer;
 
-    if estimated_profit < cfg.min_profit_xlm { return None; }
+    if estimated_profit < cfg.min_profit_sol { return None; }
 
     Some(Opportunity {
         pair_index:       pair_idx,
@@ -225,23 +226,26 @@ mod tests {
         use common::config::CommonConfig;
         let fake_cfg = crate::config::MevBotConfig {
             common: CommonConfig {
+                solana_rpc_url:     "https://api.testnet.solana.com".into(),
+                solana_cluster:     "testnet".into(),
                 horizon_url:        "https://horizon-testnet.stellar.org".into(),
-                network_passphrase: common::config::TESTNET_PASSPHRASE.into(),
+                network_passphrase: "Test SDF Network ; September 2015".into(),
                 soroban_rpc_url:    "".into(),
                 contract_id:        "".into(),
                 agent_secret:       "SCZANGBA5RLBRQ46SL6GFBFXQ3QJYR57G5YHC7VKPLLK2NNZRHIBSG".into(),
+                base_fee_lamports:  100,
                 base_fee_stroops:   100,
                 max_slippage_bps:   50,
                 log_level:          "debug".into(),
             },
             pairs:                vec![],
             imbalance_threshold:  3.0,
-            min_profit_xlm:       0.001,
-            max_position_xlm:     1000.0,
+            min_profit_sol:       0.001,
+            max_position_sol:     1000.0,
             poll_interval_ms:     500,
             depth_levels:         10,
             tx_expiry_secs:       30,
-            fee_bump_stroops:     500,
+            priority_fee_lamports: 500,
         };
 
         let opp = analyse_book(&ob, 0, &fake_cfg);

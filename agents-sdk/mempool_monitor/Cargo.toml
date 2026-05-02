@@ -1,6 +1,6 @@
 [package]
 name        = "mempool_monitor"
-description = "Real-time Stellar transaction stream monitor with configurable alerts"
+description = "Solana network monitoring and alert system"
 version.workspace   = true
 edition.workspace   = true
 authors.workspace   = true

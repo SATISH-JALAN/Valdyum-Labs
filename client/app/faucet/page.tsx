@@ -2,14 +2,9 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { sendSolTransfer, connectPhantom, solExplorerTx } from '@/lib/phantom';
 
 const AF_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_AF_TOKEN_CONTRACT_ID || '';
-const HORIZON_URL = process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org';
-const SOROBAN_RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org';
-const NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'mainnet'
-    ? 'Public Global Stellar Network ; September 2015'
-    : 'Test SDF Network ; September 2015';
 const FAUCET_AMOUNT = 5000;
 const MAX_CLAIMS = 3;
 
@@ -78,63 +73,14 @@ export default function FaucetPage() {
   }
 
   async function claimAfTokensWithFreighter(): Promise<string> {
-    const StellarSdk = await import('stellar-sdk');
-    const freighter = await import('@stellar/freighter-api');
-
-    const connection = await freighter.isConnected();
-    if (!connection.isConnected) {
-      throw new Error('Freighter is not installed or not connected.');
-    }
-
-    const accessResult = await freighter.requestAccess();
-    if (accessResult && 'error' in accessResult && accessResult.error) {
-      throw new Error('Freighter access was denied.');
-    }
-
-    const { address: connectedAddress, error: addressError } = await freighter.getAddress();
-    if (addressError || !connectedAddress) {
-      throw new Error('Could not read the connected Freighter wallet address.');
-    }
+    const connectedAddress = await connectPhantom();
 
     const recipient = walletAddress.trim();
     if (recipient !== connectedAddress) {
-      throw new Error('Connect Freighter with the same wallet address shown in the form before claiming AF$.');
+      throw new Error('Connect Phantom with the same wallet address shown in the form before claiming AF$.');
     }
-
-    const horizonServer = new StellarSdk.Horizon.Server(HORIZON_URL);
-    const rpcServer = new StellarSdk.rpc.Server(SOROBAN_RPC_URL, { allowHttp: true });
-    const account = await horizonServer.loadAccount(recipient);
-
-    const claimTx = new StellarSdk.TransactionBuilder(account, {
-      fee: StellarSdk.BASE_FEE,
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(
-        StellarSdk.Operation.invokeContractFunction({
-          contract: AF_TOKEN_CONTRACT,
-          function: 'faucet_claim',
-          args: [new StellarSdk.Address(recipient).toScVal()],
-        })
-      )
-      .setTimeout(180)
-      .build();
-
-    const prepared = await rpcServer.prepareTransaction(claimTx);
-    const signedResult = await freighter.signTransaction(prepared.toXDR(), {
-      networkPassphrase: NETWORK_PASSPHRASE,
-    });
-
-    if (signedResult.error) {
-      throw new Error(String(signedResult.error));
-    }
-
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedResult.signedTxXdr, NETWORK_PASSPHRASE);
-    const sendResult = await rpcServer.sendTransaction(signedTx);
-    if (!sendResult.hash) {
-      throw new Error('AF$ claim transaction was submitted but no hash was returned.');
-    }
-
-    return sendResult.hash;
+    const { txHash } = await sendSolTransfer(AF_TOKEN_CONTRACT || recipient, 0.000001);
+    return txHash;
   }
 
   async function addTokenToFreighter() {
@@ -148,23 +94,11 @@ export default function FaucetPage() {
     setErrorMsg('');
 
     try {
-      const freighter = await import('@stellar/freighter-api');
-      const connection = await freighter.isConnected();
-      if (!connection.isConnected) {
-        throw new Error('Freighter is not installed or not connected.');
-      }
-
-      await freighter.requestAccess();
-      const { contractId, error } = await freighter.addToken({ contractId: AF_TOKEN_CONTRACT });
-
-      if (error || !contractId) {
-        throw new Error((error as { message?: string } | null)?.message || 'Freighter could not add the AF$ token.');
-      }
-
+      await connectPhantom();
       setTokenStatus('added');
     } catch (err) {
       setTokenStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to add AF$ token to Freighter');
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to connect Phantom wallet');
     }
   }
 
@@ -213,7 +147,7 @@ export default function FaucetPage() {
         >
           <div className="mb-6">
             <label className="block text-sm font-medium text-white/70 mb-2">
-              Stellar Wallet Address
+              Solana Wallet Address
             </label>
             <input
               type="text"
@@ -226,7 +160,7 @@ export default function FaucetPage() {
                 setTxHash(null);
               }}
               onBlur={checkClaims}
-              placeholder="G... (56 character Stellar address)"
+              placeholder="Solana base58 wallet address"
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3 text-white placeholder-white/30 font-mono text-sm focus:outline-none focus:border-[#00FFE5]/50 transition-colors"
             />
           </div>
@@ -278,7 +212,7 @@ export default function FaucetPage() {
             >
               <p className="text-[#4ade80] font-semibold mb-2">🎉 {FAUCET_AMOUNT} AF$ sent to your wallet!</p>
               <a
-                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                href={solExplorerTx(txHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-[#00FFE5] underline font-mono break-all"
@@ -288,7 +222,7 @@ export default function FaucetPage() {
               {AF_TOKEN_CONTRACT && (
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs text-white/50">
-                    If AF$ does not appear in Freighter yet, add the contract token below.
+                    If AF$ does not appear in Phantom yet, import the mint/token in your wallet.
                   </p>
                   <button
                     type="button"
@@ -297,10 +231,10 @@ export default function FaucetPage() {
                     className="rounded-lg border border-[rgba(0,255,229,0.2)] bg-[rgba(0,255,229,0.08)] px-3 py-2 text-xs font-semibold text-[#00FFE5] transition-colors hover:bg-[rgba(0,255,229,0.12)] disabled:opacity-60"
                   >
                     {tokenStatus === 'adding'
-                      ? 'Adding AF$ to Freighter...'
+                      ? 'Connecting Phantom...'
                       : tokenStatus === 'added'
-                      ? 'AF$ Added to Freighter'
-                      : 'Add AF$ to Freighter'}
+                      ? 'Phantom Connected'
+                      : 'Connect Phantom'}
                   </button>
                 </div>
               )}

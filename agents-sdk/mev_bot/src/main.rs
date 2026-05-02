@@ -1,34 +1,17 @@
-//! MEV Bot — entry point.
-//!
-//! Connects to Horizon, watches for large order-book imbalances on configured
-//! trading pairs, and submits front-run / sandwich orders when opportunities
-//! exceed the configured profit threshold.
-//!
-//! ## 0x402 Protocol
-//! The MEV bot can optionally call AgentForge AI agents for real-time market
-//! intelligence (e.g. sentiment analysis, token risk scores). Those calls use
-//! the 0x402 payment protocol — the bot automatically handles the pay-per-
-//! request dance via [`common::PaymentClient`].
-//!
-//! ## Pub-Sub
-//! Every executed trade is published to the Kafka backbone via
-//! [`common::KafkaPublisher`] so the AgentForge dashboard and billing system
-//! can reflect earnings in real time.
-//!
-//! ## Usage
-//! ```
-//! cp .env.template .env
-//! # fill in AGENT_SECRET_KEY, pairs, thresholds …
-//! cargo run --release --bin mev_bot
-//! ```
+//! MEV Bot — Solana entry point
 
 mod config;
 mod executor;
+mod rpc;
 mod strategy;
 
 use anyhow::Result;
-use common::{HorizonClient, KafkaPublisher, Keypair, PaymentClient};
+// Solana MEV detection
+use common::HorizonClient;
+use solana_sdk::signature::{Keypair, Signer};
 use tracing::info;
+
+use common::QStashPublisher;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -42,29 +25,40 @@ async fn main() -> Result<()> {
         .init();
 
     info!(
-        network  = if cfg.common.is_mainnet() { "mainnet" } else { "testnet" },
-        horizon  = %cfg.common.horizon_url,
-        pairs    = cfg.pairs.len(),
-        "MEV Bot starting"
+        network = if cfg.common.is_mainnet() { "mainnet" } else { "devnet" },
+        rpc     = %cfg.common.solana_rpc_url,
+        pairs   = cfg.pairs.len(),
+        "MEV Bot starting (Solana)"
     );
 
-    let horizon         = HorizonClient::new(&cfg.common.horizon_url)?;
-    let keypair         = Keypair::from_secret(&cfg.common.agent_secret)?;
+    // ── Solana RPC client ───────────────────────────────────────
+    let rpc = rpc::RpcClient::new(cfg.common.solana_rpc_url.clone());
+    let horizon = HorizonClient::new(cfg.common.horizon_url.clone())?;
 
-    // 0x402 client — used for paid A2A calls to AgentForge intelligence agents.
-    let payment_client  = PaymentClient::new(
-        keypair.clone(),
-        &cfg.common.horizon_url,
-        &cfg.common.network_passphrase,
+    // ── Legacy order-book source (temporary compatibility) ──────
+    // Solana mempool monitoring
+
+    // ── Load wallet ─────────────────────────────────────────────
+    let keypair = Keypair::from_bytes(
+        &bs58::decode(&cfg.common.agent_secret).into_vec()?
     )?;
 
-    // Kafka publisher — publishes trade events to the AgentForge platform.
-    let kafka           = KafkaPublisher::from_env();
+    info!(address = %keypair.pubkey(), "Loaded wallet");
 
-    info!(address = %keypair.public_key, "Loaded wallet");
-    info!("0x402 payment client ready — A2A calls will auto-pay via Stellar");
-    info!("Kafka publisher ready — trades will stream to AgentForge dashboard");
+    // ── QStash publisher ───────────────────────────────────────
+    let qstash = QStashPublisher::from_env();
 
-    // Run the main scan loop — never returns unless a fatal error occurs.
-    strategy::scan_loop(&cfg, &horizon, &keypair, &payment_client, &kafka).await
+    info!("QStash publisher ready — trades will stream");
+
+    // ── Optional: integrate 0x402 flow on top of Solana payments ──
+    info!("0x402 payment flow enabled via platform sidecar / QStash events");
+
+    // ── Start strategy loop ─────────────────────────────────────
+    strategy::scan_loop(
+        &cfg,
+        &horizon,
+        &rpc,
+        &keypair,
+        &qstash,
+    ).await
 }

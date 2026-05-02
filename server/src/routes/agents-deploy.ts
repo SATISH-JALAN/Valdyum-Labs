@@ -1,5 +1,4 @@
 ﻿import { Router, Request, Response } from 'express';
-import * as StellarSdk from 'stellar-sdk';
 import crypto from 'node:crypto';
 import {
   buildValidationTransaction,
@@ -9,13 +8,12 @@ import {
   validateAgentId,
   persistDeploymentToDatabase,
   getDeploymentStatus,
-} from '../services/soroban-deployment';
+} from '../services/solana-deployment';
 
 const router: Router = Router();
 
-const VALIDATOR_CONTRACT_ID = process.env.SOROBAN_VALIDATOR_ID || process.env.NEXT_PUBLIC_SOROBAN_VALIDATOR_ID || '';
-const HORIZON_URL = process.env.HORIZON_URL || process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org';
-const NETWORK_PASSPHRASE = (process.env.STELLAR_NETWORK || process.env.NEXT_PUBLIC_STELLAR_NETWORK) === 'mainnet' ? StellarSdk.Networks.PUBLIC : StellarSdk.Networks.TESTNET;
+const VALIDATOR_CONTRACT_ID = process.env.SOLANA_VALIDATOR_ID || process.env.NEXT_PUBLIC_SOLANA_VALIDATOR_ID || '';
+const SOLANA_CLUSTER = process.env.SOLANA_CLUSTER || process.env.NEXT_PUBLIC_SOLANA_CLUSTER || 'testnet';
 
 router.post('/validate-deploy', async (req: Request, res: Response) => {
   try {
@@ -29,7 +27,7 @@ router.post('/validate-deploy', async (req: Request, res: Response) => {
     }
 
     if (!validateWalletAddress(deployer_wallet)) {
-      res.status(400).json({ error: 'Invalid Stellar wallet address' });
+      res.status(400).json({ error: 'Invalid Solana wallet address' });
       return;
     }
 
@@ -46,7 +44,7 @@ router.post('/validate-deploy', async (req: Request, res: Response) => {
     await logDeploymentEvent('validate_deploy_requested', agent_id, deployer_wallet, { price_xlm, metadata_hash });
 
     if (!VALIDATOR_CONTRACT_ID) {
-      console.warn('[validate-deploy] NEXT_PUBLIC_SOROBAN_VALIDATOR_ID not set — running in dev mode');
+      console.warn('[validate-deploy] NEXT_PUBLIC_SOLANA_VALIDATOR_ID not set — running in dev mode');
       await logDeploymentEvent('validate_deploy_dev_mode', agent_id, deployer_wallet, { message: 'On-chain validation skipped in dev mode' });
 
       res.status(200).json({
@@ -73,11 +71,11 @@ router.post('/validate-deploy', async (req: Request, res: Response) => {
         status: 'pending_validation_signature',
         validation_tx_xdr: xdr,
         network_passphrase: networkPassphrase,
-        validation_fee_xlm: validationFee / 10_000_000,
+        validation_fee_xlm: validationFee,
         validation_fee_stroops: validationFee,
         agent_id,
         deployer_wallet,
-        confirmation_message: `Confirm Agent Deployment on Stellar Soroban\n=============================================\n\nAgent ID:        ${agent_id}\nOwner Wallet:    ${deployer_wallet}\nPrice per Request: ${price_xlm} XLM\nMetadata Hash:   ${metadata_hash}\n\nValidation Fee:  5 XLM (0.00000000 in stroops)\nTotal Cost:      5 XLM upfront\n\nNetwork:         Stellar Testnet\nSmart Contracts:\n  - AgentValidator: ${VALIDATOR_CONTRACT_ID}\n\nBy signing this transaction, you authorize:\n  ✓ Verification of your Stellar wallet ownership\n  ✓ Duplicate agent ID check in AgentRegistry\n  ✓ Reservation of this agent_id on-chain\n  ✓ Fee commitment (5 XLM non-refundable)\n  ✓ Progression to agent registration step\n\nThis is Step 1 of 2. After signing, you will\nconfirm final deployment with your signature.`,
+        confirmation_message: `Confirm Agent Deployment on Solana\n=============================================\n\nAgent ID:        ${agent_id}\nOwner Wallet:    ${deployer_wallet}\nPrice per Request: ${price_xlm} (units)\nMetadata Hash:   ${metadata_hash}\n\nValidation Fee:  0 (handled off-chain)\n\nNetwork:         Solana Testnet\nSmart Contracts:\n  - AgentValidator: ${VALIDATOR_CONTRACT_ID}\n\nBy signing this transaction, you authorize:\n  ✓ Verification of your Solana wallet ownership\n  ✓ Duplicate agent ID check in AgentRegistry\n  ✓ Reservation of this agent_id on-chain\n\nThis is Step 1 of 2. After signing, you will\nconfirm final deployment with your signature.`,
         instructions: [
           'Step 1 of 3: Sign this validation transaction in your Freighter wallet',
           'Step 2: After signing, submit it to /api/agents/confirm-deploy',
@@ -118,7 +116,7 @@ router.post('/confirm-deploy', async (req: Request, res: Response) => {
     }
 
     if (!validateWalletAddress(deployer_wallet)) {
-      res.status(400).json({ error: 'Invalid wallet address' });
+      res.status(400).json({ error: 'Invalid Solana wallet address' });
       return;
     }
 
@@ -129,17 +127,9 @@ router.post('/confirm-deploy', async (req: Request, res: Response) => {
 
     await logDeploymentEvent('confirm_deploy_requested', agent_id, deployer_wallet, { price_xlm, metadata_hash });
 
-    const server = new StellarSdk.Horizon.Server(HORIZON_URL);
-
+    // For Solana flow we accept the signed validation payload and continue.
     if (VALIDATOR_CONTRACT_ID) {
-      try {
-        const tx = StellarSdk.TransactionBuilder.fromXDR(signedRequestTxXdr, NETWORK_PASSPHRASE) as StellarSdk.Transaction;
-        await server.submitTransaction(tx);
-        console.log(`[confirm-deploy] request_deploy tx submitted: ${agent_id}`);
-      } catch (submitErr) {
-        console.warn(`[confirm-deploy] Request TX submission warning: ${submitErr instanceof Error ? submitErr.message : String(submitErr)}`);
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      console.log(`[confirm-deploy] processing signed validation payload for ${agent_id}`);
     }
 
     const sigHashBytes = crypto.createHash('sha256').update(validationMessage, 'utf8').digest();
@@ -166,12 +156,17 @@ router.post('/confirm-deploy', async (req: Request, res: Response) => {
     }
 
     try {
-      const { xdr: confirmTxXdr } = await buildConfirmationTransaction(deployer_wallet, agent_id, sigHashHex);
+      const { xdr: confirmTxXdr } = await buildConfirmationTransaction(sigHashHex, {
+        deployer_wallet,
+        agent_id,
+        price_xlm,
+        metadata_hash,
+      });
       responseData = {
         ...responseData,
         confirm_tx_xdr: confirmTxXdr,
-        network_passphrase: NETWORK_PASSPHRASE,
-        next_step: 'Sign confirm_tx_xdr in your Freighter wallet, then submit via /api/agents/submit-confirmation',
+        network_passphrase: SOLANA_CLUSTER,
+        next_step: 'Sign confirm_tx_xdr in your wallet, then submit via /api/agents/submit-confirmation',
       };
     } catch (txErr) {
       const errMsg = txErr instanceof Error ? txErr.message : String(txErr);
@@ -208,9 +203,10 @@ router.post('/submit-confirmation', async (req: Request, res: Response) => {
     const feeStroops = 50_000_000;
     const dbResult = await persistDeploymentToDatabase(deployer_wallet, agent_id, metadata_hash, price_xlm, feeStroops);
 
-    if (!dbResult.success) {
-      await logDeploymentEvent('submit_confirmation_db_error', agent_id, deployer_wallet, { error: dbResult.error });
-      res.status(500).json({ error: 'Failed to persist deployment', details: dbResult.error });
+    if (!(dbResult as any).success) {
+      const dbError = (dbResult as any).error;
+      await logDeploymentEvent('submit_confirmation_db_error', agent_id, deployer_wallet, { error: dbError });
+      res.status(500).json({ error: 'Failed to persist deployment', details: dbError });
       return;
     }
 

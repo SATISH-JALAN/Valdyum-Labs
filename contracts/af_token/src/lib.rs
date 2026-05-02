@@ -1,186 +1,131 @@
-//! AF$ Token — AgentForge Native Token
-//!
-//! A Soroban fungible token on Stellar testnet.
-//! Total supply: 100,000,000 AF$
-//! Faucet: 5,000 AF$ per claim, max 3 claims per wallet.
-//!
-//! Deploy on testnet:
-//!   stellar contract deploy --wasm target/wasm32-unknown-unknown/release/af_token.wasm \
-//!     --source <secret> --network testnet
+use anchor_lang::prelude::*;
 
-#![no_std]
+declare_id!("11111111111111111111111111111114");
 
-use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short,
-    Address, Env, String, Symbol,
-};
+#[program]
+pub mod af_token {
+    use super::*;
 
-// ─── Storage keys ─────────────────────────────────────────────────────────────
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        let token = &mut ctx.accounts.token;
+        token.admin = ctx.accounts.admin.key();
+        token.total_supply = TOTAL_SUPPLY;
+        token.name = "Valdyum Token".to_string();
+        token.symbol = "VALD$".to_string();
+        token.decimals = 7;
 
-const TOTAL_SUPPLY_KEY: Symbol = symbol_short!("TSUPPLY");
-const ADMIN_KEY: Symbol = symbol_short!("ADMIN");
-const NAME_KEY: Symbol = symbol_short!("NAME");
-const SYMBOL_KEY: Symbol = symbol_short!("SYMBOL");
-const DECIMALS_KEY: Symbol = symbol_short!("DECIMALS");
+        let admin_balance = &mut ctx.accounts.admin_balance;
+        admin_balance.owner = ctx.accounts.admin.key();
+        admin_balance.balance = TOTAL_SUPPLY;
 
-const FAUCET_AMOUNT: i128 = 5_000 * 10_000_000; // 5000 AF$ in smallest unit (7 decimals)
-const FAUCET_MAX_CLAIMS: u32 = 3;
-const TOTAL_SUPPLY: i128 = 100_000_000 * 10_000_000; // 100M AF$
+        Ok(())
+    }
 
-#[contracttype]
-pub enum DataKey {
-    Balance(Address),
-    Allowance(Address, Address),
-    FaucetClaims(Address),
+    pub fn transfer(ctx: Context<Transfer>, amount: i64) -> Result<()> {
+        require!(amount > 0, TokenError::InvalidAmount);
+        require!(ctx.accounts.from_balance.balance >= amount, TokenError::InsufficientBalance);
+
+        ctx.accounts.from_balance.balance -= amount;
+        ctx.accounts.to_balance.balance = ctx.accounts.to_balance.balance.saturating_add(amount);
+        Ok(())
+    }
+
+    pub fn faucet_claim(ctx: Context<FaucetClaim>) -> Result<()> {
+        require!(
+            ctx.accounts.claims.claim_count < FAUCET_MAX_CLAIMS,
+            TokenError::FaucetLimitReached
+        );
+        require!(ctx.accounts.admin_balance.balance >= FAUCET_AMOUNT, TokenError::FaucetDepleted);
+
+        ctx.accounts.admin_balance.balance -= FAUCET_AMOUNT;
+        ctx.accounts.user_balance.balance = ctx.accounts.user_balance.balance.saturating_add(FAUCET_AMOUNT);
+        ctx.accounts.claims.claim_count = ctx.accounts.claims.claim_count.saturating_add(1);
+        Ok(())
+    }
+
+    pub fn mint(ctx: Context<MintTo>, amount: i64) -> Result<()> {
+        require!(amount > 0, TokenError::InvalidAmount);
+        let token = &mut ctx.accounts.token;
+        token.total_supply = token.total_supply.saturating_add(amount);
+        ctx.accounts.to_balance.balance = ctx.accounts.to_balance.balance.saturating_add(amount);
+        Ok(())
+    }
 }
 
-// ─── Contract ─────────────────────────────────────────────────────────────────
+const FAUCET_AMOUNT: i64 = 5_000 * 10_000_000;
+const FAUCET_MAX_CLAIMS: u32 = 3;
+const TOTAL_SUPPLY: i64 = 100_000_000 * 10_000_000;
 
-#[contract]
-pub struct AfToken;
+#[account]
+pub struct TokenState {
+    pub admin: Pubkey,
+    pub total_supply: i64,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+}
 
-#[contractimpl]
-impl AfToken {
-    /// Initialize the AF$ token. Must be called once after deployment.
-    pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&ADMIN_KEY) {
-            panic!("already initialized");
-        }
-        admin.require_auth();
+#[account]
+pub struct BalanceAccount {
+    pub owner: Pubkey,
+    pub balance: i64,
+}
 
-        env.storage().instance().set(&ADMIN_KEY, &admin);
-        env.storage().instance().set(&TOTAL_SUPPLY_KEY, &TOTAL_SUPPLY);
-        env.storage().instance().set(&NAME_KEY, &String::from_str(&env, "AgentForge Token"));
-        env.storage().instance().set(&SYMBOL_KEY, &String::from_str(&env, "AF$"));
-        env.storage().instance().set(&DECIMALS_KEY, &7u32);
+#[account]
+pub struct FaucetClaims {
+    pub owner: Pubkey,
+    pub claim_count: u32,
+}
 
-        // Mint all supply to admin
-        env.storage()
-            .persistent()
-            .set(&DataKey::Balance(admin.clone()), &TOTAL_SUPPLY);
-    }
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    #[account(init, payer = admin, space = 8 + 32 + 8 + 4 + 32 + 4 + 8 + 1)]
+    pub token: Account<'info, TokenState>,
+    #[account(init, payer = admin, space = 8 + 32 + 8)]
+    pub admin_balance: Account<'info, BalanceAccount>,
+    pub system_program: Program<'info, System>,
+}
 
-    // ─── ERC-20-like interface ────────────────────────────────────────────────
+#[derive(Accounts)]
+pub struct Transfer<'info> {
+    pub owner: Signer<'info>,
+    #[account(mut, constraint = from_balance.owner == owner.key())]
+    pub from_balance: Account<'info, BalanceAccount>,
+    #[account(mut)]
+    pub to_balance: Account<'info, BalanceAccount>,
+}
 
-    pub fn name(env: Env) -> String {
-        env.storage().instance().get(&NAME_KEY).unwrap()
-    }
+#[derive(Accounts)]
+pub struct FaucetClaim<'info> {
+    pub user: Signer<'info>,
+    pub token: Account<'info, TokenState>,
+    #[account(mut, constraint = admin_balance.owner == token.admin)]
+    pub admin_balance: Account<'info, BalanceAccount>,
+    #[account(mut, constraint = user_balance.owner == user.key())]
+    pub user_balance: Account<'info, BalanceAccount>,
+    #[account(mut, constraint = claims.owner == user.key())]
+    pub claims: Account<'info, FaucetClaims>,
+}
 
-    pub fn symbol(env: Env) -> String {
-        env.storage().instance().get(&SYMBOL_KEY).unwrap()
-    }
+#[derive(Accounts)]
+pub struct MintTo<'info> {
+    pub admin: Signer<'info>,
+    #[account(mut, constraint = token.admin == admin.key())]
+    pub token: Account<'info, TokenState>,
+    #[account(mut)]
+    pub to_balance: Account<'info, BalanceAccount>,
+}
 
-    pub fn decimals(env: Env) -> u32 {
-        env.storage().instance().get(&DECIMALS_KEY).unwrap_or(7)
-    }
-
-    pub fn total_supply(env: Env) -> i128 {
-        env.storage().instance().get(&TOTAL_SUPPLY_KEY).unwrap_or(0)
-    }
-
-    pub fn balance(env: Env, owner: Address) -> i128 {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Balance(owner))
-            .unwrap_or(0)
-    }
-
-    pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
-        from.require_auth();
-        assert!(amount > 0, "amount must be positive");
-
-        let from_balance = Self::balance(env.clone(), from.clone());
-        assert!(from_balance >= amount, "insufficient balance");
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Balance(from), &(from_balance - amount));
-
-        let to_balance = Self::balance(env.clone(), to.clone());
-        env.storage()
-            .persistent()
-            .set(&DataKey::Balance(to), &(to_balance + amount));
-    }
-
-    pub fn approve(env: Env, owner: Address, spender: Address, amount: i128) {
-        owner.require_auth();
-        env.storage()
-            .persistent()
-            .set(&DataKey::Allowance(owner, spender), &amount);
-    }
-
-    pub fn allowance(env: Env, owner: Address, spender: Address) -> i128 {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Allowance(owner, spender))
-            .unwrap_or(0)
-    }
-
-    pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, amount: i128) {
-        spender.require_auth();
-        let allowed = Self::allowance(env.clone(), from.clone(), spender.clone());
-        assert!(allowed >= amount, "allowance exceeded");
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Allowance(from.clone(), spender), &(allowed - amount));
-
-        Self::transfer(env, from, to, amount);
-    }
-
-    // ─── Faucet ───────────────────────────────────────────────────────────────
-
-    /// Claim 5,000 AF$ tokens. Max 3 claims per wallet address.
-    pub fn faucet_claim(env: Env, recipient: Address) {
-        recipient.require_auth();
-
-        let claims: u32 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::FaucetClaims(recipient.clone()))
-            .unwrap_or(0);
-
-        assert!(claims < FAUCET_MAX_CLAIMS, "faucet claim limit reached (max 3)");
-
-        // Transfer from admin balance to recipient
-        let admin: Address = env.storage().instance().get(&ADMIN_KEY).unwrap();
-        let admin_balance = Self::balance(env.clone(), admin.clone());
-        assert!(admin_balance >= FAUCET_AMOUNT, "faucet depleted");
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Balance(admin), &(admin_balance - FAUCET_AMOUNT));
-
-        let recipient_balance = Self::balance(env.clone(), recipient.clone());
-        env.storage()
-            .persistent()
-            .set(&DataKey::Balance(recipient.clone()), &(recipient_balance + FAUCET_AMOUNT));
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::FaucetClaims(recipient), &(claims + 1));
-    }
-
-    pub fn faucet_claims_remaining(env: Env, address: Address) -> u32 {
-        let claims: u32 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::FaucetClaims(address))
-            .unwrap_or(0);
-        FAUCET_MAX_CLAIMS.saturating_sub(claims)
-    }
-
-    // ─── Admin ────────────────────────────────────────────────────────────────
-
-    pub fn mint(env: Env, to: Address, amount: i128) {
-        let admin: Address = env.storage().instance().get(&ADMIN_KEY).unwrap();
-        admin.require_auth();
-        assert!(amount > 0, "amount must be positive");
-        let balance = Self::balance(env.clone(), to.clone());
-        env.storage()
-            .persistent()
-            .set(&DataKey::Balance(to), &(balance + amount));
-        let supply: i128 = env.storage().instance().get(&TOTAL_SUPPLY_KEY).unwrap_or(0);
-        env.storage().instance().set(&TOTAL_SUPPLY_KEY, &(supply + amount));
-    }
+#[error_code]
+pub enum TokenError {
+    #[msg("Invalid amount")]
+    InvalidAmount,
+    #[msg("Insufficient balance")]
+    InsufficientBalance,
+    #[msg("Faucet limit reached")]
+    FaucetLimitReached,
+    #[msg("Faucet depleted")]
+    FaucetDepleted,
 }

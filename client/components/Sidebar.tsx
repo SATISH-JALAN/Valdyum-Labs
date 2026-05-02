@@ -74,7 +74,7 @@ export default function Sidebar() {
       <p className="font-mono text-[10px] text-gray-600 uppercase tracking-widest px-3 mb-3">App</p>
       <nav className="flex flex-col gap-0.5">
         {sidebarLinks.map((link) => {
-          const active = pathname === link.href || pathname.startsWith(link.href + '/');
+          const active = pathname ? pathname === link.href || pathname.startsWith(link.href + '/') : false;
           return (
             <Link
               key={link.href}
