@@ -5,12 +5,12 @@
  */
 
 // Types
-export * from './types/index';
-export * from './types/events';
+export * from './types/index.js';
+export * from './types/events.js';
 
 // Constants
-export { TOPICS } from './constants/topics';
-export type { Topic } from './constants/topics';
+export { TOPICS } from './constants/topics.js';
+export type { Topic } from './constants/topics.js';
 
 // Utils
-export { truncateAddress } from './utils/solana';
+export { truncateAddress } from './utils/solana.js';

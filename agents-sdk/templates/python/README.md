@@ -1,4 +1,4 @@
-# Valdyum Python Agent Templates (LangGraph)
+# Valdyum Labs Python Agent Templates (LangGraph)
 
 These templates provide LangGraph-powered agent workflows for all 6 Valdyum agent types.
 
@@ -14,6 +14,8 @@ VALDYUM_API_URL=http://localhost:3000
 OPENAI_API_KEY=your_key
 ANTHROPIC_API_KEY=your_key
 SOLANA_RPC_URL=https://api.testnet.solana.com
+HELIUS_RPC_URL=https://rpc.helius.xyz/?api-key=your_key
+HELIUS_API_KEY=your_key
 SOLANA_CLUSTER=testnet
 SOLANA_AGENT_SECRET=your_secret
 SOLANA_AGENT_WALLET=your_wallet_address
@@ -22,6 +24,7 @@ QSTASH_TOKEN=your_qstash_token
 PLATFORM_API_URL=http://localhost:3000
 JUPITER_API_KEY=your_key
 ABLY_API_KEY=your_key
+WEBHOOK_URL=your_webhook_url
 ```
 
 ## Agents

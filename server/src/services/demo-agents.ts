@@ -48,7 +48,7 @@ const demoAgents = new Map<string, Agent>([
     '1',
     {
       id: '1',
-      owner_wallet: 'GABC1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234XYZ1',
+      owner_wallet: '8nD1jMsRYEc8qCauqbKbWaoVmF8wsf13baDzQcfaJLUv',
       name: 'DeFi Analyst',
       description: 'Analyzes DeFi protocols, yields, and on-chain metrics in real time.',
       tags: ['web3', 'finance', 'defi'],

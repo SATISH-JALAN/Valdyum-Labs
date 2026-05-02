@@ -479,6 +479,70 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /:id/run
+router.post('/:id/sandbox', async (req: Request, res: Response) => {
+  const { id: agentId } = req.params;
+
+  try {
+    let agent;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      agent = getDemoAgentById(agentId);
+    } else {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { data, error } = await supabase.from('agents').select('*').eq('id', agentId).single();
+      agent = (error && isMissingAgentsTableError(error)) ? getDemoAgentById(agentId) : data;
+    }
+
+    if (!agent) {
+      res.status(404).json({ error: 'Agent not found' });
+      return;
+    }
+    if (!agent.is_active) {
+      res.status(403).json({ error: 'Agent is not active' });
+      return;
+    }
+
+    const body = req.body || {};
+    const { input } = body;
+    if (!input || typeof input !== 'string') {
+      res.status(400).json({ error: 'Missing input field' });
+      return;
+    }
+
+    const isMarketplaceAgent = ['public', 'forked'].includes(String(agent.visibility || ''));
+    const effectivePrompt = isMarketplaceAgent && body.customization?.prompt
+      ? body.customization.prompt
+      : agent.system_prompt;
+
+    let output = 'Unknown model';
+    if (agent.model === 'openai-gpt4o-mini') {
+      if (!process.env.OPENAI_API_KEY) {
+        output = '[Sandbox mode] OpenAI API key not configured.';
+      } else {
+        const { runOpenAIAgent } = await import('../services/openai');
+        output = await runOpenAIAgent(effectivePrompt, input);
+      }
+    } else if (agent.model === 'anthropic-claude-haiku') {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        output = '[Sandbox mode] Anthropic API key not configured.';
+      } else {
+        const { runAnthropicAgent } = await import('../services/anthropic');
+        output = await runAnthropicAgent(effectivePrompt, input);
+      }
+    }
+
+    res.json({
+      ok: true,
+      sandbox: true,
+      agentId,
+      model: agent.model,
+      output,
+    });
+  } catch (err) {
+    console.error('Sandbox agent error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.post('/:id/run', async (req: Request, res: Response) => {
   const { id: agentId } = req.params;
   const startTime = Date.now();

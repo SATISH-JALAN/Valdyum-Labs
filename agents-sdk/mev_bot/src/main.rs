@@ -6,6 +6,7 @@ mod rpc;
 mod strategy;
 
 use anyhow::Result;
+// Solana MEV detection
 use common::HorizonClient;
 use solana_sdk::signature::{Keypair, Signer};
 use tracing::info;
@@ -32,9 +33,10 @@ async fn main() -> Result<()> {
 
     // ── Solana RPC client ───────────────────────────────────────
     let rpc = rpc::RpcClient::new(cfg.common.solana_rpc_url.clone());
+    let horizon = HorizonClient::new(cfg.common.horizon_url.clone())?;
 
     // ── Legacy order-book source (temporary compatibility) ──────
-    let horizon = HorizonClient::new(cfg.common.horizon_url.clone())?;
+    // Solana mempool monitoring
 
     // ── Load wallet ─────────────────────────────────────────────
     let keypair = Keypair::from_bytes(

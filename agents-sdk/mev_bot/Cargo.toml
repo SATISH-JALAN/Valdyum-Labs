@@ -1,6 +1,6 @@
 [package]
 name        = "mev_bot"
-description = "Solana Jupiter MEV bot — route-optimized opportunity execution"
+description = "Solana MEV sandwich detection and mitigation"
 version.workspace   = true
 edition.workspace   = true
 authors.workspace   = true

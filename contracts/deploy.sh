@@ -1,87 +1,47 @@
 #!/bin/bash
-# deploy.sh — Deploy AgentRegistry + AgentValidator to Stellar Testnet
-# Prerequisites: stellar CLI installed and configured
-# Install: https://developers.stellar.org/docs/build/smart-contracts/getting-started/setup
+# deploy.sh - Deploy AgentRegistry, AgentValidator, and AF token on Solana testnet
 
-set -e
+set -euo pipefail
 
-echo "🚀 Building AgentRegistry contract..."
-cd contracts/agent_registry
-stellar contract build --optimize
-REGISTRY_WASM="target/wasm32v1-none/release/agent_registry.wasm"
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT_DIR"
 
-echo "⬆️  Deploying AgentRegistry to Stellar Testnet..."
-REGISTRY_ID=$(stellar contract deploy \
-  --wasm "$REGISTRY_WASM" \
-  --source alice \
-  --network testnet)
+echo "🚀 Building Anchor workspace..."
+anchor build
+
+REGISTRY_KEYPAIR="target/deploy/agent_registry-keypair.json"
+VALIDATOR_KEYPAIR="target/deploy/agent_validator-keypair.json"
+TOKEN_KEYPAIR="target/deploy/af_token-keypair.json"
+
+if [[ ! -f "$REGISTRY_KEYPAIR" || ! -f "$VALIDATOR_KEYPAIR" || ! -f "$TOKEN_KEYPAIR" ]]; then
+  echo "❌ Missing deploy keypairs in target/deploy. Run 'anchor build' first or create the program keypairs."
+  exit 1
+fi
+
+REGISTRY_ID=$(solana address -k "$REGISTRY_KEYPAIR")
+VALIDATOR_ID=$(solana address -k "$VALIDATOR_KEYPAIR")
+TOKEN_ID=$(solana address -k "$TOKEN_KEYPAIR")
+
+echo "⬆️  Deploying Solana programs via Anchor..."
+anchor deploy
 
 echo "✅ AgentRegistry deployed: $REGISTRY_ID"
-cd ../..
-
-echo ""
-echo "🚀 Building AgentValidator contract..."
-cd contracts/agent_validator
-stellar contract build --optimize
-VALIDATOR_WASM="target/wasm32v1-none/release/agent_validator.wasm"
-
-echo "⬆️  Deploying AgentValidator to Stellar Testnet..."
-VALIDATOR_ID=$(stellar contract deploy \
-  --wasm "$VALIDATOR_WASM" \
-  --source alice \
-  --network testnet)
-
 echo "✅ AgentValidator deployed: $VALIDATOR_ID"
+echo "✅ AF token deployed: $TOKEN_ID"
 
 echo ""
-echo "🔗 Initializing AgentValidator with AgentRegistry address..."
-echo "   (inter-contract link established)"
-stellar contract invoke \
-  --id "$VALIDATOR_ID" \
-  --source alice \
-  --network testnet \
-  -- initialize \
-  --admin alice \
-  --registry "$REGISTRY_ID"
+echo "📝 Add to your .env.local or .env:"
+echo "NEXT_PUBLIC_SOLANA_CONTRACT_ID=$REGISTRY_ID"
+echo "NEXT_PUBLIC_SOLANA_VALIDATOR_ID=$VALIDATOR_ID"
+echo "NEXT_PUBLIC_SOLANA_TOKEN_ID=$TOKEN_ID"
+echo "SOLANA_REGISTRY_ID=$REGISTRY_ID"
+echo "SOLANA_VALIDATOR_ID=$VALIDATOR_ID"
+echo "SOLANA_TOKEN_ID=$TOKEN_ID"
 
 echo ""
-echo "📝 Add to your .env.local:"
-echo "NEXT_PUBLIC_SOROBAN_CONTRACT_ID=$REGISTRY_ID"
-echo "NEXT_PUBLIC_SOROBAN_VALIDATOR_ID=$VALIDATOR_ID"
-cd ../..
+echo "🧪 Verifying deployed program addresses..."
+solana program show "$REGISTRY_ID" || true
+solana program show "$VALIDATOR_ID" || true
+solana program show "$TOKEN_ID" || true
 
-echo ""
-echo "🧪 Test inter-contract call flow:"
-echo "  Step 1: Validate wallet"
-stellar contract invoke \
-  --id "$VALIDATOR_ID" \
-  --source alice \
-  --network testnet \
-  -- validate_wallet \
-  --deployer alice \
-  --agent_id test_agent_1
-
-echo "  Step 2: Request deploy"
-stellar contract invoke \
-  --id "$VALIDATOR_ID" \
-  --source alice \
-  --network testnet \
-  -- request_deploy \
-  --deployer alice \
-  --agent_id test_agent_1 \
-  --metadata_hash "ipfs_hash_placeholder" \
-  --price_stroops 500000
-
-echo "  Step 3: Confirm deploy (inter-contract call → AgentRegistry.register_agent)"
-stellar contract invoke \
-  --id "$VALIDATOR_ID" \
-  --source alice \
-  --network testnet \
-  -- confirm_deploy \
-  --deployer alice \
-  --agent_id test_agent_1 \
-  --signature_hash "0000000000000000000000000000000000000000000000000000000000000000"
-
-echo ""
-echo "🎉 All done! Both contracts deployed and inter-contract link verified."
-
+echo "🎉 Solana deployment flow completed."

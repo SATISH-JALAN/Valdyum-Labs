@@ -44,8 +44,9 @@ async fn main() -> Result<()> {
         "Mempool Monitor starting"
     );
 
-    let horizon  = HorizonClient::new(&cfg.common.horizon_url)?;
+    // Solana Websocket monitoring
     let keypair  = Keypair::from_secret(&cfg.common.agent_secret)?;
+    let horizon  = HorizonClient::new(&cfg.common.horizon_url)?;
     let _payment = PaymentClient::new(
         keypair.clone(),
         &cfg.common.horizon_url,

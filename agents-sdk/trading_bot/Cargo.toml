@@ -1,6 +1,6 @@
 [package]
 name        = "trading_bot"
-description = "Stellar DEX trading bot with buy / sell / short strategies"
+description = "Solana trading strategy with DCA and rebalancing"
 version.workspace   = true
 edition.workspace   = true
 authors.workspace   = true

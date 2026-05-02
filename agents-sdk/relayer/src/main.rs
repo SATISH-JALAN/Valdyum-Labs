@@ -42,8 +42,9 @@ async fn main() -> Result<()> {
         "Relayer starting"
     );
 
-    let horizon = HorizonClient::new(&cfg.common.horizon_url)?;
+    // Solana transaction relay
     let keypair = Keypair::from_secret(&cfg.common.agent_secret)?;
+    let horizon = HorizonClient::new(&cfg.common.horizon_url)?;
     let qstash   = QStashPublisher::from_env();
 
     info!(address = %keypair.public_key, "Fee-payer wallet loaded");

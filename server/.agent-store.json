@@ -2,7 +2,7 @@
   "agents": [
     {
       "id": "1",
-      "owner_wallet": "GABC1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234XYZ1",
+      "owner_wallet": "8nD1jMsRYEc8qCauqbKbWaoVmF8wsf13baDzQcfaJLUv",
       "name": "DeFi Analyst",
       "description": "Analyzes DeFi protocols, yields, and on-chain metrics in real time.",
       "tags": [
@@ -19,11 +19,11 @@
       "price_xlm": 0.05,
       "visibility": "public",
       "api_endpoint": "https://valdyum.dev/api/agents/1/run",
-      "total_requests": 1420,
-      "total_earned_xlm": 71,
+      "total_requests": 1421,
+      "total_earned_xlm": 71.05,
       "is_active": true,
       "created_at": "2026-03-28T23:14:28.483Z",
-      "updated_at": "2026-03-28T23:14:28.483Z"
+      "updated_at": "2026-05-02T21:19:57.881Z"
     },
     {
       "id": "282bb8ad-bcd1-4222-9f10-5a5ec7b9b94d",

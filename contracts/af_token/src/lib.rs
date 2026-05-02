@@ -10,8 +10,8 @@ pub mod af_token {
         let token = &mut ctx.accounts.token;
         token.admin = ctx.accounts.admin.key();
         token.total_supply = TOTAL_SUPPLY;
-        token.name = "AgentForge Token".to_string();
-        token.symbol = "AF$".to_string();
+        token.name = "Valdyum Token".to_string();
+        token.symbol = "VALD$".to_string();
         token.decimals = 7;
 
         let admin_balance = &mut ctx.accounts.admin_balance;

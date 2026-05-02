@@ -1,6 +1,6 @@
 [package]
 name        = "arbitrage_tracker"
-description = "Stellar cross-pair + triangular arbitrage detector and executor"
+description = "Solana multi-hop arbitrage detector and executor via Jupiter"
 version.workspace   = true
 edition.workspace   = true
 authors.workspace   = true

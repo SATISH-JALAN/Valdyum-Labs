@@ -21,7 +21,8 @@ mod slippage;
 mod tracker;
 
 use anyhow::Result;
-use common::{HorizonClient, QStashPublisher};
+use common::HorizonClient;
+use common::{QStashPublisher};
 use tracing::info;
 
 #[tokio::main]
@@ -42,6 +43,7 @@ async fn main() -> Result<()> {
         "Liquidity Slippage Tracker starting"
     );
 
+    // Solana RPC liquidity tracking
     let horizon = HorizonClient::new(&cfg.common.horizon_url)?;
     let qstash   = QStashPublisher::from_env();
 

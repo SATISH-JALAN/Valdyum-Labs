@@ -51,6 +51,7 @@ import ablyRouter from './routes/ably';
 import dashboardRouter from './routes/dashboard';
 import faucetRouter from './routes/faucet';
 import paymentRouter from './routes/payment';
+import clawcreditRouter from './routes/clawcredit';
 
 app.use('/api/agents', agentsDeployRouter);
 app.use('/api/agents', agentsRouter);
@@ -58,6 +59,7 @@ app.use('/api/ably', ablyRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/faucet', faucetRouter);
 app.use('/api/payment', paymentRouter);
+app.use('/api/clawcredit', clawcreditRouter);
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 

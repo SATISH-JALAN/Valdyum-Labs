@@ -26,13 +26,25 @@ export async function verifyPaymentTransaction(
     }
 
     const conn = getConnection();
-    const tx = await conn.getParsedTransaction(txHash, {
+    let tx = await conn.getParsedTransaction(txHash, {
       maxSupportedTransactionVersion: 0,
       commitment: 'confirmed',
     });
 
     if (!tx) {
-      return { valid: false, error: 'Transaction not found' };
+      const confirmed = await waitForTransaction(txHash, 30_000);
+      if (!confirmed) {
+        return { valid: false, error: 'Transaction not found' };
+      }
+
+      tx = await conn.getParsedTransaction(txHash, {
+        maxSupportedTransactionVersion: 0,
+        commitment: 'confirmed',
+      });
+
+      if (!tx) {
+        return { valid: false, error: 'Transaction not found after confirmation' };
+      }
     }
 
     if (!tx.meta || tx.meta.err) {

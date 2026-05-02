@@ -181,6 +181,214 @@ program
     }, null, 2));
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ClawCredit Commands
+// ─────────────────────────────────────────────────────────────────────────────
+
+import {
+  readClawCreditCredentials,
+  getClawCreditStatus,
+  payMerchantWithCredit,
+  hasSufficientCredit,
+  getDashboardLink,
+} from '../services/clawcredit';
+
+program
+  .command('clawcredit:status')
+  .description('Show ClawCredit prequalification and credit status')
+  .option('-s, --scope <scope>', 'Agent scope', 'main')
+  .action(async (opts) => {
+    const spinner = ora('Fetching ClawCredit status...').start();
+    try {
+      const credentials = readClawCreditCredentials(opts.scope);
+
+      if (!credentials) {
+        spinner.fail(chalk.yellow('ClawCredit not registered'));
+        console.log(chalk.gray('Run: pnpm exec tsx src/scripts/clawcredit-register.ts'));
+        return;
+      }
+
+      spinner.succeed(chalk.green('Status loaded'));
+
+      // Display concurrent status checks
+      const statusSpinner = ora().start();
+
+      const statusChecks = [
+        {
+          label: 'Pre-qualification Status',
+          value: (credentials.prequalification_status as string) || 'unknown',
+          icon: (credentials.credit_issued as boolean) ? '✓' : '⏳',
+        },
+        {
+          label: 'Credit Issued',
+          value: (credentials.credit_issued as boolean) ? 'Yes' : 'No',
+          icon: (credentials.credit_issued as boolean) ? '✓' : '✗',
+        },
+        {
+          label: 'Credit Limit',
+          value: `$${credentials.credit_limit || 0}`,
+          icon: (credentials.credit_limit as number) > 0 ? '✓' : '-',
+        },
+        {
+          label: 'Credit Balance',
+          value: `$${credentials.credit_balance || 0}`,
+          icon: '-',
+        },
+        {
+          label: 'Available Credit',
+          value: `$${((credentials.credit_limit as number) || 0) - ((credentials.credit_balance as number) || 0)}`,
+          icon: '💳',
+        },
+      ];
+
+      statusSpinner.stop();
+      console.log(chalk.cyan.bold('\n📊 ClawCredit Status\n'));
+
+      for (const check of statusChecks) {
+        console.log(`${chalk.cyan(check.icon)} ${check.label.padEnd(25)} ${chalk.white(check.value)}`);
+      }
+
+      if (credentials.dashboard_link) {
+        console.log(`\n${chalk.blue('🔗 Dashboard:')} ${credentials.dashboard_link}`);
+      }
+
+      const nextActions = getNextActionsForCLI(credentials);
+      if (nextActions.length > 0) {
+        console.log(chalk.yellow.bold('\n📝 Next Actions:'));
+        for (const action of nextActions) {
+          console.log(`  • ${action}`);
+        }
+      }
+    } catch (err) {
+      spinner.fail(chalk.red(String(err)));
+    }
+  });
+
+program
+  .command('clawcredit:pay')
+  .description('Pay a merchant using ClawCredit')
+  .requiredOption('-u, --url <merchantUrl>', 'Merchant URL')
+  .requiredOption('-a, --amount <usd>', 'Amount in USD')
+  .option('-d, --description <desc>', 'Payment description')
+  .option('--trace', 'Enable LLM tracing')
+  .action(async (opts) => {
+    const spinner = ora('Processing ClawCredit payment...').start();
+    try {
+      const amountUsd = parseFloat(opts.amount);
+      if (Number.isNaN(amountUsd) || amountUsd <= 0) {
+        spinner.fail(chalk.red('Invalid amount'));
+        return;
+      }
+
+      const credentials = readClawCreditCredentials();
+      if (!credentials) {
+        spinner.fail(chalk.yellow('ClawCredit not registered'));
+        return;
+      }
+
+      // Check sufficient credit concurrently with payment processing
+      const creditCheck = ora('Checking available credit...').start();
+      const hasSufficient = await hasSufficientCredit(
+        amountUsd,
+        'valdyum-agent',
+        credentials.apiToken as string,
+      );
+      creditCheck.stop();
+
+      if (!hasSufficient) {
+        spinner.fail(chalk.red(`Insufficient credit for $${amountUsd} payment`));
+        console.log(chalk.yellow('Check ClawCredit status for available balance'));
+        return;
+      }
+
+      creditCheck.succeed(chalk.green('✓ Sufficient credit available'));
+
+      // Process payment
+      const paymentSpinner = ora(`Paying $${amountUsd} to ${opts.url}...`).start();
+      const result = await payMerchantWithCredit(
+        'valdyum-agent',
+        {
+          merchantUrl: opts.url,
+          amountUsd,
+          description: opts.description,
+          traceEnabled: opts.trace || false,
+        },
+        credentials.apiToken as string,
+      );
+
+      if (result.success) {
+        paymentSpinner.succeed(chalk.green(`✓ Payment successful`));
+        console.log(chalk.gray(`Transaction ID: ${result.transactionId || 'pending'}`));
+      } else {
+        paymentSpinner.fail(chalk.red(`Payment failed: ${result.error}`));
+      }
+    } catch (err) {
+      spinner.fail(chalk.red(String(err)));
+    }
+  });
+
+program
+  .command('clawcredit:dashboard')
+  .description('Open ClawCredit dashboard in browser or show link')
+  .option('-s, --scope <scope>', 'Agent scope', 'main')
+  .option('--print-only', 'Print link instead of opening')
+  .action(async (opts) => {
+    const spinner = ora('Getting dashboard link...').start();
+    try {
+      const link = getDashboardLink(opts.scope);
+
+      if (!link) {
+        spinner.fail(chalk.yellow('ClawCredit dashboard link not available'));
+        return;
+      }
+
+      spinner.succeed(chalk.green('Dashboard link ready'));
+
+      if (opts.printOnly) {
+        console.log(link);
+      } else {
+        console.log(chalk.blue(`🔗 Opening: ${link}`));
+        // In a real CLI, you would use 'open' (macOS) or 'xdg-open' (Linux) here
+        console.log(chalk.gray('Copy the link above to open in your browser'));
+      }
+    } catch (err) {
+      spinner.fail(chalk.red(String(err)));
+    }
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper Functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getNextActionsForCLI(credentials: Record<string, unknown>): string[] {
+  const actions: string[] = [];
+  const status = credentials.prequalification_status as string;
+  const creditIssued = credentials.credit_issued as boolean;
+
+  if (!creditIssued) {
+    if (status === 'needs_more_context') {
+      actions.push('Add agent transcripts to OPENCLAW_TRANSCRIPT_DIRS');
+      actions.push('Set OPENCLAW_PROMPT_DIRS for agent prompts');
+    } else {
+      actions.push('Check dashboard for pre-qualification progress');
+    }
+  }
+
+  if (creditIssued) {
+    const balance = (credentials.credit_balance || 0) as number;
+    const limit = (credentials.credit_limit || 0) as number;
+    const utilization = (balance / limit) * 100;
+
+    if (utilization > 80) {
+      actions.push(`Credit usage high (${Math.round(utilization)}%). Schedule repayment soon.`);
+    }
+
+    actions.push('Use clawcredit:pay to make purchases');
+  }
+
+  return actions;
+}
+
 program.parseAsync().catch((err) => {
   console.error(chalk.red(String(err)));
   process.exit(1);

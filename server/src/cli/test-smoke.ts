@@ -15,6 +15,19 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
+import dotenv from 'dotenv';
+import path from 'node:path';
+
+for (const candidate of [
+  '.env.local',
+  '.env',
+  '.env.example',
+  '../.env.local',
+  '../.env',
+  '../.env.example',
+]) {
+  dotenv.config({ path: path.resolve(process.cwd(), candidate), override: false });
+}
 
 const program = new Command();
 
@@ -82,6 +95,8 @@ async function testEnvironmentConfig(): Promise<TestResult> {
       hasJupiterKey: !!JUPITER_API_KEY,
       hasQStashToken: !!QSTASH_TOKEN,
       hasTapeDriveKey: !!TAPEDRIVE_API_KEY,
+      hasAblyKey: !!process.env.ABLY_API_KEY,
+      clawcreditInviteCode: process.env.CLAWCREDIT_INVITE_CODE || null,
     },
   };
 }
@@ -319,19 +334,65 @@ async function testGPUOptimization(): Promise<TestResult> {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
         
-        const resp = await fetch(`${OLLAMA_ENDPOINT}/api/tags`, { 
+        // Check if Ollama is available and has models
+        const tagsResp = await fetch(`${OLLAMA_ENDPOINT}/api/tags`, { 
           signal: controller.signal,
         });
         
         clearTimeout(timeout);
-        if (resp.ok) {
-          gpuStatus = 'available';
-          gpuDetails.endpoint = OLLAMA_ENDPOINT;
-          gpuDetails.type = 'Ollama LLM';
+        
+        if (tagsResp.ok) {
+          const tagsData = await tagsResp.json() as any;
+          const models = tagsData?.models || [];
+          
+          if (models.length > 0) {
+            gpuStatus = 'available';
+            gpuDetails.endpoint = OLLAMA_ENDPOINT;
+            gpuDetails.type = 'Ollama LLM';
+            gpuDetails.models = models.map((m: any) => m.name || m).slice(0, 3);
+            gpuDetails.modelCount = models.length;
+            
+            // Try to run a quick inference test with the first available model
+            if (models.length > 0) {
+              try {
+                const model = models[0]?.name || models[0];
+                const inferenceTimeout = setTimeout(() => controller.abort(), 10000);
+                
+                const inferResp = await fetch(`${OLLAMA_ENDPOINT}/api/generate`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    model,
+                    prompt: 'What is 2+2?',
+                    stream: false,
+                  }),
+                  signal: controller.signal,
+                });
+                
+                clearTimeout(inferenceTimeout);
+                
+                if (inferResp.ok) {
+                  gpuDetails.inferenceTest = 'passed';
+                  gpuDetails.testedModel = model;
+                }
+              } catch {
+                // Inference test failed but Ollama is still available
+                gpuDetails.inferenceTest = 'skipped (timeout or error)';
+              }
+            }
+          } else {
+            gpuStatus = 'available';
+            gpuDetails.endpoint = OLLAMA_ENDPOINT;
+            gpuDetails.type = 'Ollama LLM (no models loaded)';
+            gpuDetails.note = 'Pull a model with: ollama pull <model_name>';
+          }
+        } else {
+          gpuStatus = 'unavailable';
+          gpuDetails.error = `Ollama API error: ${tagsResp.status}`;
         }
-      } catch {
+      } catch (err) {
         gpuStatus = 'unavailable';
-        gpuDetails.error = 'Ollama endpoint unreachable';
+        gpuDetails.error = `Ollama endpoint unreachable: ${String(err).slice(0, 60)}`;
       }
     } else if (GPU_MODE === 'metal') {
       gpuStatus = 'available';
