@@ -5,7 +5,7 @@ import AppShell from "@/components/AppShell";
 import AblyNotifications from "@/components/AblyNotifications";
 
 export const metadata: Metadata = {
-  title: "Valdyum — AI Agent Marketplace on Solana",
+  title: "Valdyum — AI Agent Infrastructure Layer on Solana",
   description:
     "Build, monetize, and deploy AI agents on the Solana blockchain. Pay per request with 0x402 protocol.",
   icons: {

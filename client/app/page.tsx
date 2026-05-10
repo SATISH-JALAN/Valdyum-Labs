@@ -3,8 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import LiveFeed from '@/components/LiveFeed';
-import ProtocolFlow from '@/components/ProtocolFlow';
 import HeroSection from '@/components/sections/HeroSection';
 
 import gsap from 'gsap';
@@ -22,7 +20,7 @@ if (typeof window !== 'undefined') {
 const AGENT_TEMPLATES = [
   {
     icon: '⚡',
-    title: 'MEV Bot',
+    title: 'MEV Agent',
     desc: 'Front-running & sandwich detection on Solana DEX order books with sub-500ms latency.',
     tag: 'HIGH FREQ',
     color: 'from-[#00FFE5]/10 to-transparent',
@@ -52,7 +50,7 @@ const AGENT_TEMPLATES = [
   },
   {
     icon: '📈',
-    title: 'Trading Bot',
+    title: 'Trading Agent',
     desc: 'Buy / sell / short strategies with grid & DCA modes, stop-loss, and take-profit.',
     tag: 'TRADING',
     color: 'from-[#4ade80]/10 to-transparent',
@@ -179,9 +177,10 @@ function splitTextRef(
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const transitionRef = useRef<HTMLDivElement>(null);
+  const container1Ref = useRef<HTMLDivElement>(null);
+  const track1Ref = useRef<HTMLDivElement>(null);
+  const container2Ref = useRef<HTMLDivElement>(null);
+  const track2Ref = useRef<HTMLDivElement>(null);
   const transitionOverlayRef = useRef<HTMLDivElement>(null);
   const transitionContentRef = useRef<HTMLDivElement>(null);
 
@@ -209,29 +208,48 @@ export default function HomePage() {
 
   // Initialize GSAP Horizontal Scroll & Global Snapping
   useGSAP(() => {
-    const track = trackRef.current;
-    const container = containerRef.current;
-    if (!track || !container) return;
+    const container1 = container1Ref.current;
+    const track1 = track1Ref.current;
+    const container2 = container2Ref.current;
+    const track2 = track2Ref.current;
+    if (!container1 || !track1 || !container2 || !track2) return;
 
-    let hasAnimated = false;
-    // eslint-disable-next-line prefer-const
-    let sdkAnim: gsap.core.Tween | null = null;
-
-    // Master Timeline: Horizontal Scroll + Curtain Sweep + SDK Section Slide Up
-    const masterTl = gsap.timeline({
+    // === HORIZONTAL SECTION 1: Slide 1 ("The Problem") → Slide 2 (empty) ===
+    gsap.timeline({
       scrollTrigger: {
-        trigger: container,
+        trigger: container1,
+        start: "top top",
+        end: "+=2500",
+        scrub: 1,
+        pin: true,
+        invalidateOnRefresh: true,
+        snap: {
+          snapTo: [0, 1],
+          duration: { min: 0.3, max: 0.8 },
+          delay: 0.25,
+          ease: "power2.inOut",
+          inertia: false
+        }
+      }
+    }).to(track1, {
+      x: () => -(window.innerWidth),
+      ease: "none",
+    });
+
+    // === HORIZONTAL SECTION 2: Empty start → Slide 4 ("The Legion") → Curtain → SDK ===
+    let hasAnimated = false;
+
+    const masterTl2 = gsap.timeline({
+      scrollTrigger: {
+        trigger: container2,
         start: "top top",
         end: "+=5000",
         scrub: 1,
         pin: true,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
-          // Smooth entry and exit logic using independent tweens
-          if (self.progress > 0.92 && !hasAnimated) {
+          if (self.progress > 0.88 && !hasAnimated) {
             hasAnimated = true;
-
-            // The elements we want to animate (must query them since we are in the scrollTrigger context)
             const content = document.querySelector('[data-anim="sdk-container"]');
             if (content) {
               const elements = [
@@ -240,18 +258,13 @@ export default function HomePage() {
                 content.querySelector('[data-anim="sdk-code"]')
               ];
               gsap.to(elements, {
-                y: 0,
-                autoAlpha: 1,
-                scale: 1,
-                duration: 0.9,
-                ease: 'back.out(1.2)',
-                stagger: 0.15,
-                overwrite: true
+                y: 0, autoAlpha: 1, scale: 1,
+                duration: 0.9, ease: 'back.out(1.2)',
+                stagger: 0.15, overwrite: true
               });
             }
-          } else if (self.progress < 0.91 && hasAnimated) {
+          } else if (self.progress < 0.87 && hasAnimated) {
             hasAnimated = false;
-
             const content = document.querySelector('[data-anim="sdk-container"]');
             if (content) {
               const elements = [
@@ -259,28 +272,19 @@ export default function HomePage() {
                 content.querySelector('[data-anim="sdk-heading"]'),
                 content.querySelector('[data-anim="sdk-code"]')
               ];
-              // Smooth, simultaneous fade-out (no stagger) so the left-side bust vanishes instantly
               gsap.to(elements, {
-                y: 60,
-                autoAlpha: 0,
-                scale: 0.96,
-                duration: 0.4,
-                ease: 'power2.inOut',
-                stagger: 0,
-                overwrite: true
+                y: 60, autoAlpha: 0, scale: 0.96,
+                duration: 0.4, ease: 'power2.inOut',
+                stagger: 0, overwrite: true
               });
             }
           }
         },
         snap: {
-          snapTo: (progress) => {
-            // Only snap the horizontal slides (0, 0.3, 0.6).
-            // Leave the curtain wipe and SDK slide-up free from snapping.
-            if (progress <= 0.65) {
-              const points = [0, 0.3, 0.6];
-              return points.reduce((prev, curr) =>
-                Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev
-              );
+          snapTo: (progress: number) => {
+            // Snap to the horizontal slide positions only; leave curtain wipe free
+            if (progress <= 0.35) {
+              return Math.round(progress / 0.3) * 0.3;
             }
             return progress;
           },
@@ -291,49 +295,39 @@ export default function HomePage() {
       }
     });
 
-    // Phase 1: Horizontal Scroll (60% of timeline -> 3000px)
-    masterTl.to(track, {
-      x: () => -(window.innerWidth * 2),
+    // Phase 1: Horizontal scroll to The Legion (30% of timeline)
+    masterTl2.to(track2, {
+      x: () => -(window.innerWidth),
       ease: "none",
-      duration: 0.6
+      duration: 0.3
     });
 
-    // Phase 2: Curtain Wipe (20% of timeline -> 1000px)
+    // Phase 2: Curtain Wipe over The Legion (remaining 70%)
     const overlay = transitionOverlayRef.current;
     const content = transitionContentRef.current;
 
     if (overlay && content) {
-      // Half-moon curved curtain wipe using clip-path
       gsap.set(overlay, {
         clipPath: 'circle(0% at 100% 50%)',
         backgroundColor: '#f2fbff',
-        transform: 'none' // Override any inline styles
+        transform: 'none'
       });
 
-      // Set container statically, we will animate the children directly to prevent nested transform jitter
-      // Added data-anim attribute for the onUpdate query
       content.setAttribute('data-anim', 'sdk-container');
       gsap.set(content, { yPercent: 0, visibility: 'visible', opacity: 1 });
 
-      // Reset the elements inside for a cool 'pop-in' entry animation later
       const sdkElements = [
         content.querySelector('[data-anim="sdk-image"]'),
         content.querySelector('[data-anim="sdk-heading"]'),
         content.querySelector('[data-anim="sdk-code"]')
       ];
-      // Use autoAlpha to prevent invisible elements from catching pointer events
       gsap.set(sdkElements, { y: 150, autoAlpha: 0, scale: 0.96 });
 
-      // Phase 2: Curved Curtain sweep covers the screen
-      // Duration 0.40 consumes the rest of the scroll, ensuring maximum smoothness
-      masterTl.to(overlay, {
+      masterTl2.to(overlay, {
         clipPath: 'circle(150% at 100% 50%)',
         ease: 'none',
-        duration: 0.40
-      }, 0.6);
-
-      // Removed the physical content slide-up (Phase 3) as the time-based pop-in is much smoother
-      // and nested scrubbed transforms cause jitter.
+        duration: 0.70
+      }, 0.3);
     }
 
     // Custom Cursor tracking
@@ -341,26 +335,20 @@ export default function HomePage() {
     const moveCursor = (e: MouseEvent) => {
       if (cursor) {
         gsap.to(cursor, {
-          x: e.clientX,
-          y: e.clientY,
-          duration: 0.15,
-          ease: 'power2.out'
+          x: e.clientX, y: e.clientY,
+          duration: 0.15, ease: 'power2.out'
         });
       }
     };
     window.addEventListener('mousemove', moveCursor);
 
-    // 3. Global Vertical Snapping
+    // Global Vertical Snapping
     const sections = gsap.utils.toArray<HTMLElement>('section');
     if (sections.length === 0) return;
 
     let snapPoints: number[] = [];
-    let horizStart = 0;
-    let horizEnd = 0;
-    // eslint-disable-next-line prefer-const
-    let transStart = 0;
-    // eslint-disable-next-line prefer-const
-    let transEnd = 0;
+    let h1Start = 0, h1End = 0;
+    let h2Start = 0, h2End = 0;
 
     const calculateSnapPoints = () => {
       const maxScroll = ScrollTrigger.maxScroll(window);
@@ -373,11 +361,15 @@ export default function HomePage() {
         return startPos / maxScroll;
       });
 
-      // Map out the horizontal + transition section boundaries to prevent vertical snapping inside it
-      const horizSt = ScrollTrigger.create({ trigger: container, start: 'top top' });
-      horizStart = horizSt.start / maxScroll;
-      horizEnd = (horizSt.start + 5000) / maxScroll;
-      horizSt.kill();
+      const s1 = ScrollTrigger.create({ trigger: container1, start: 'top top' });
+      h1Start = s1.start / maxScroll;
+      h1End = (s1.start + 2500) / maxScroll;
+      s1.kill();
+
+      const s2 = ScrollTrigger.create({ trigger: container2, start: 'top top' });
+      h2Start = s2.start / maxScroll;
+      h2End = (s2.start + 5000) / maxScroll;
+      s2.kill();
     };
 
     ScrollTrigger.addEventListener('refresh', calculateSnapPoints);
@@ -387,26 +379,24 @@ export default function HomePage() {
       start: 0,
       end: 'max',
       snap: {
-        snapTo: (progress) => {
+        snapTo: (progress: number) => {
           if (snapPoints.length === 0) return progress;
 
-          // Disable global vertical snap when inside the horizontal/transition area
-          if (progress > horizStart + 0.005 && progress < horizEnd - 0.005) {
+          // Disable global snap inside or near either horizontal section (wider margin to prevent fighting)
+          if ((progress > h1Start - 0.01 && progress < h1End + 0.01) ||
+            (progress > h2Start - 0.01 && progress < h2End + 0.01)) {
             return progress;
           }
 
-          // Disable snap when scrolling into the footer (past the last section)
           const lastSnapPoint = Math.max(...snapPoints);
-          if (progress > lastSnapPoint + 0.01) {
-            return progress;
-          }
+          if (progress > lastSnapPoint + 0.01) return progress;
 
           return snapPoints.reduce((prev, curr) =>
             Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev
           );
         },
-        duration: { min: 0.2, max: 0.6 },
-        delay: 0.15,
+        duration: { min: 0.3, max: 0.8 },
+        delay: 0.25,
         ease: 'power1.inOut',
       },
     });
@@ -428,9 +418,9 @@ export default function HomePage() {
 
       <HeroSection />
 
-      {/* ── MASTER HORIZONTAL SCROLL SECTION ────── */}
-      <section ref={containerRef} className="relative w-full h-[100svh] bg-[#f2fbff] z-10 overflow-hidden">
-        <div ref={trackRef} className="flex h-full w-[300vw] will-change-transform">
+      {/* ── HORIZONTAL SECTION 1: Slide 1 → Slide 2 (empty) ────── */}
+      <section ref={container1Ref} className="relative w-full h-[100svh] bg-[#f2fbff] z-10 overflow-hidden">
+        <div ref={track1Ref} className="flex h-full w-[200vw] will-change-transform">
 
           {/* SLIDE 1: The Problem (100vw) */}
           <div className="w-screen h-[100svh] flex-shrink-0 flex flex-col px-6 lg:px-12 relative overflow-hidden">
@@ -467,7 +457,7 @@ export default function HomePage() {
                 </h2>
                 <div className="mt-12 xl:mt-20 hidden lg:block">
                   <p className="text-xl font-medium text-white/90 leading-relaxed italic max-w-md">
-                    &quot;Every developer starting from zero. Every edge dying in isolation.&quot;
+                    &quot;From isolated tools to autonomous Infrastructure.&quot;
                   </p>
                 </div>
               </div>
@@ -510,108 +500,179 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* SLIDE 2: 0x402 Core Architecture */}
-          <div className="w-screen h-[100svh] flex-shrink-0 flex flex-col px-4 md:px-8 lg:px-12 relative overflow-hidden">
-            {/* Background image */}
-            <img
-              src="/background/slide2.png"
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ zIndex: 0 }}
-            />
+          {/* SLIDE 2: Workflow — Headline + Full Architecture */}
+          <div className="w-screen h-[100svh] flex-shrink-0 bg-gradient-to-b from-[#f2fbff] to-[#e6f4fa] flex flex-col items-center justify-start px-4 lg:px-12 pt-28 pb-4 relative overflow-hidden">
 
-            <div className="w-full h-full max-w-[1400px] mx-auto flex flex-col px-6 lg:px-12 pt-16 lg:pt-20 pb-8 relative" style={{ zIndex: 2 }}>
+            {/* Background lighting */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[500px] bg-[#799ee0]/10 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[400px] bg-[#799ee0]/10 blur-[100px] rounded-full pointer-events-none" />
 
-              {/* HEADER ROW: Label + Headline (left) + Description (right) */}
-              <div className="shrink-0 mb-3 lg:mb-4 max-w-5xl w-full">
-                {/* Section label */}
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="h-[1px] w-10 bg-[#2a2218]/25" />
-                  <span className="font-mono text-xs font-medium text-[#2a2218]/50 tracking-[0.2em] uppercase" style={{ textShadow: '0 1px 8px rgba(255,255,255,0.6)' }}>
-                    Core Architecture
-                  </span>
-                </div>
+            {/* Section label */}
+            <div className="flex items-center gap-4 mb-2 relative z-10">
+              <span className="h-[1px] w-10 bg-[#799ee0]/40" />
+              <span className="font-mono text-[10px] font-semibold text-[#799ee0] tracking-[0.2em] uppercase">Architecture</span>
+              <span className="h-[1px] w-10 bg-[#799ee0]/40" />
+            </div>
 
-                {/* Headline + Description side by side */}
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 lg:gap-12">
-                  <h2 className="font-sans font-medium tracking-tight text-[#2a2218] leading-[0.92] cursor-default" style={{ fontSize: 'clamp(2.8rem, 5.5vw, 6rem)', textShadow: '0 2px 16px rgba(255,255,255,0.7)' }}>
-                    <span ref={(el) => splitTextRef(el, { color: '#2a2218' })}>0x402 × QStash</span>
-                    <br />
-                    <span ref={(el) => splitTextRef(el, { color: 'rgba(42,34,24,0.35)', delay: 0.1 })}>× Solana.</span>
-                  </h2>
-                  <p className="lg:max-w-sm text-base lg:text-lg font-medium text-[#2a2218]/60 leading-relaxed pb-1 shrink-0" style={{ textShadow: '0 1px 10px rgba(255,255,255,0.6)' }}>
-                    The complete payment-to-execution pipeline powering every agent interaction.
-                    Gasless UX, fully verified, all on-chain.
-                  </p>
-                </div>
+            {/* Headline */}
+            <h2 className="font-sans font-medium tracking-tight text-[#111111] leading-[0.92] cursor-default text-center mb-2 relative z-10" style={{ fontSize: 'clamp(2.5rem, 5vw, 5rem)' }}>
+              <span ref={(el) => splitTextRef(el)}>Workflow.</span>
+            </h2>
+
+            <p className="font-sans text-sm text-black/50 leading-relaxed max-w-2xl text-center mb-4">
+              Five interconnected pipelines orchestrate every agent — from wallet authentication
+              through execution, payment, and trust verification.
+            </p>
+
+            {/* Full Workflow Diagram + Side Graphics */}
+            <div className="w-full max-w-[1600px] mx-auto flex-1 min-h-0 flex items-center justify-center pb-4 px-4 lg:px-8 gap-4 xl:gap-8">
+              
+              {/* Left Graphic */}
+              <div className="hidden lg:flex w-1/4 max-w-[280px] h-full flex-col items-center justify-center opacity-40 hover:opacity-60 transition-all duration-500">
+                <img
+                  src="/background/bg1.png"
+                  alt="Architecture Node Left"
+                  className="w-full h-auto max-h-full object-contain mix-blend-multiply transition-transform duration-700 hover:scale-[1.02]"
+                />
               </div>
 
-              {/* MAIN CARD: Frosted glass style */}
-              <div className="relative flex flex-col lg:flex-row overflow-hidden rounded-3xl flex-1 min-h-0 max-w-5xl mr-auto w-full"
-                style={{
-                  background: 'rgba(255, 252, 247, 0.82)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                  border: '1px solid rgba(194, 170, 130, 0.35)',
-                }}
-              >
-
-                {/* Content - Pushed to the right visually */}
-                <div className="p-4 md:p-5 lg:p-6 flex flex-col justify-center lg:w-[45%] relative z-10 overflow-y-auto ml-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  <div className="font-mono text-[10px] md:text-[11px] text-[#b8a070] mb-2 tracking-[0.2em]">01</div>
-
-                  <h3 className="font-sans text-2xl md:text-3xl font-medium mb-2 tracking-tight text-[#2a2218] leading-tight cursor-default">
-                    <span ref={(el) => splitTextRef(el, { color: '#2a2218' })}>Execution</span>
-                    <br />
-                    <span ref={(el) => splitTextRef(el, { color: '#2a2218', delay: 0.1 })}>Pipeline.</span>
-                  </h3>
-
-                  <p className="font-sans text-xs md:text-sm text-[#2a2218]/50 mb-4 max-w-sm leading-snug">
-                    Five core components orchestrate the lifecycle of an agent. From the initial
-                    HTTP 402 challenge, to Solana payment verification, to QStash event broadcasting.
-                  </p>
-
-                  <div className="flex flex-col gap-1.5 md:gap-2">
-                    {[
-                      { title: 'Agent SDK', desc: 'Rust / 0x402 client' },
-                      { title: '0x402 Protocol', desc: 'HTTP 402 → Solana TX' },
-                      { title: 'Platform API', desc: 'Next.js · Anchor verify' },
-                      { title: 'QStash Pub-Sub', desc: 'Upstash · 8 topics' },
-                      { title: 'Dashboard', desc: 'Real-time · Ably' },
-                    ].map((step, i) => (
-                      <div key={i} className="flex items-center gap-2 md:gap-3">
-                        <span className="text-[#b8a070] text-[10px] shrink-0">✦</span>
-                        <span className="font-sans font-semibold text-[#2a2218] text-xs md:text-sm">{step.title}</span>
-                        <span className="font-sans text-xs md:text-sm text-[#2a2218]/30">—</span>
-                        <span className="font-sans text-xs md:text-sm text-[#2a2218]/50">{step.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Vertical divider */}
-                <div className="hidden lg:block absolute right-[45%] top-8 bottom-8 w-px bg-[#c2aa82]/25" style={{ zIndex: 10 }} />
-
-                {/* Image - Pushed to the left visually with right-fade mask */}
-                <div
-                  className="absolute top-0 left-0 bottom-0 w-full lg:w-[60%] pointer-events-none"
-                  style={{
-                    maskImage: 'linear-gradient(to left, transparent 0%, black 30%)',
-                    WebkitMaskImage: 'linear-gradient(to left, transparent 0%, black 30%)'
-                  }}
-                >
+              {/* Center Main Diagram */}
+              <div className="group flex-1 w-full max-w-[1000px] h-full flex flex-col relative rounded-[24px] lg:rounded-[32px] border border-white/60 bg-white/60 backdrop-blur-xl p-2 lg:p-4 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
+                <div className="w-full flex-1 min-h-0 rounded-[16px] lg:rounded-[24px] overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-1 lg:p-2 shadow-inner flex items-center justify-center">
                   <img
-                    src="/background/0x402.png"
-                    alt="0x402 Architecture"
-                    className="w-full h-full object-cover object-[15%_center]"
+                    src="/background/workflow/full workflow.png"
+                    alt="Full Workflow Architecture"
+                    className="w-auto h-full object-contain transition-transform duration-700 group-hover:scale-[1.01]"
+                    style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }}
                   />
                 </div>
               </div>
 
+              {/* Right Graphic */}
+              <div className="hidden lg:flex w-1/4 max-w-[280px] h-full flex-col items-center justify-center opacity-40 hover:opacity-60 transition-all duration-500">
+                <img
+                  src="/background/bg2.png"
+                  alt="Architecture Node Right"
+                  className="w-full h-auto max-h-full object-contain mix-blend-multiply transition-transform duration-700 scale-[1.3] hover:scale-[1.33]"
+                />
+              </div>
+            </div>
+
+          </div>
+
+
+        </div>
+      </section>
+
+      {/* ── SLIDE 3: Workflow — Sub-pipelines (top 2) ────── */}
+      <section className="w-full min-h-[100svh] bg-gradient-to-b from-[#e6f4fa] to-[#f2fbff] flex items-center justify-center px-6 lg:px-12 py-24 relative overflow-hidden">
+        {/* Background lighting */}
+        <div className="absolute top-1/4 left-[-10%] w-[600px] h-[600px] bg-[#799ee0]/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="w-full max-w-[1400px] mx-auto relative z-10">
+
+          {/* Section continuity label */}
+          <div className="flex items-center gap-4 mb-12">
+            <span className="h-[1px] w-8 bg-[#799ee0]/40" />
+            <span className="font-mono text-xs font-semibold text-[#799ee0] tracking-[0.2em] uppercase">Pipelines</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
+
+            {/* Pipeline I: CRUD */}
+            <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
+              <div className="flex items-center gap-5 mb-4">
+                <span className="font-serif text-4xl lg:text-5xl font-medium bg-gradient-to-br from-[#799ee0] to-[#4a72bc] bg-clip-text text-transparent tracking-tight">I.</span>
+                <div>
+                  <h3 className="font-sans text-xl lg:text-2xl font-medium text-[#111111] tracking-tight">CRUD Pipeline</h3>
+                  <p className="font-sans text-xs text-[#799ee0]/80 font-medium mt-0.5">Agent lifecycle management.</p>
+                </div>
+              </div>
+              <p className="font-sans text-sm text-black/60 leading-relaxed mb-6 max-w-md">
+                Unique agent IDs anchored in Postgres. Full create, read, update, delete cycle
+                through the agent registry back to the terminal.
+              </p>
+              <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
+                <img src="/background/workflow/CRUD pipeline.png" alt="CRUD Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
+              </div>
+            </div>
+
+            {/* Pipeline II: GPU */}
+            <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
+              <div className="flex items-center gap-5 mb-4">
+                <span className="font-serif text-4xl lg:text-5xl font-medium bg-gradient-to-br from-[#799ee0] to-[#4a72bc] bg-clip-text text-transparent tracking-tight">II.</span>
+                <div>
+                  <h3 className="font-sans text-xl lg:text-2xl font-medium text-[#111111] tracking-tight">GPU Pipeline</h3>
+                  <p className="font-sans text-xs text-[#799ee0]/80 font-medium mt-0.5">Local LLM compute layer.</p>
+                </div>
+              </div>
+              <p className="font-sans text-sm text-black/60 leading-relaxed mb-6 max-w-md">
+                CLI dispatches compute to ROCm, routes through Ollama for local LLM inference,
+                and streams metrics back to the terminal.
+              </p>
+              <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
+                <img src="/background/workflow/Gpu pipeline.png" alt="GPU Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── HORIZONTAL SECTION 2: Slide 4 "The Legion" + Curtain + SDK ────── */}
+      <section ref={container2Ref} className="relative w-full h-[100svh] bg-[#f2fbff] z-10 overflow-hidden">
+        <div ref={track2Ref} className="flex h-full w-[200vw] will-change-transform">
+
+          {/* Start panel: Workflow — Sub-pipelines (bottom 2) */}
+          <div className="w-screen h-[100svh] flex-shrink-0 bg-gradient-to-b from-[#f2fbff] to-[#e6f4fa] flex items-center justify-center px-6 lg:px-12 relative overflow-hidden">
+            {/* Background lighting */}
+            <div className="absolute bottom-1/4 right-[-10%] w-[600px] h-[600px] bg-[#799ee0]/5 blur-[120px] rounded-full pointer-events-none" />
+
+            <div className="w-full max-w-[1400px] mx-auto relative z-10">
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
+
+                {/* Pipeline III: Trust Layer */}
+                <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
+                  <div className="flex items-center gap-5 mb-4">
+                    <span className="font-serif text-4xl lg:text-5xl font-medium bg-gradient-to-br from-[#799ee0] to-[#4a72bc] bg-clip-text text-transparent tracking-tight">III.</span>
+                    <div>
+                      <h3 className="font-sans text-xl lg:text-2xl font-medium text-[#111111] tracking-tight">Trust Layer</h3>
+                      <p className="font-sans text-xs text-[#799ee0]/80 font-medium mt-0.5">T54 verification pipeline.</p>
+                    </div>
+                  </div>
+                  <p className="font-sans text-sm text-black/60 leading-relaxed mb-6 max-w-md">
+                    Agent identities verified through T54. Audits and executions are cross-referenced
+                    via clawcredit facilitator for tamper-proof trust.
+                  </p>
+                  <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
+                    <img src="/background/workflow/T54 trust layer pipeline.png" alt="Trust Layer Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
+                  </div>
+                </div>
+
+                {/* Pipeline IV: Dev Toolkit */}
+                <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
+                  <div className="flex items-center gap-5 mb-4">
+                    <span className="font-serif text-4xl lg:text-5xl font-medium bg-gradient-to-br from-[#799ee0] to-[#4a72bc] bg-clip-text text-transparent tracking-tight">IV.</span>
+                    <div>
+                      <h3 className="font-sans text-xl lg:text-2xl font-medium text-[#111111] tracking-tight">Dev Toolkit</h3>
+                      <p className="font-sans text-xs text-[#799ee0]/80 font-medium mt-0.5">End-to-end developer flow.</p>
+                    </div>
+                  </div>
+                  <p className="font-sans text-sm text-black/60 leading-relaxed mb-6 max-w-md">
+                    CLI scaffolds agent folders, validates pricing, configures endpoints,
+                    runs sandboxed tests, deploys, and streams tasks to the terminal.
+                  </p>
+                  <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
+                    <img src="/background/workflow/dev toolkit pipeline.png" alt="Dev Toolkit Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
 
-          {/* SLIDE 3: The Legion */}
+          {/* SLIDE 4: The Legion */}
           <div className="w-screen h-[100svh] flex-shrink-0 flex flex-col px-6 lg:px-12 relative overflow-hidden pb-12 lg:pb-0">
             {/* Background image */}
             <img
@@ -625,9 +686,7 @@ export default function HomePage() {
 
               {/* Right Column (Visually): Headline */}
               <div className="lg:w-[35%] flex flex-col justify-center h-auto lg:h-full pt-8 lg:pt-0 lg:pl-8 relative shrink-0">
-                {/* Ultra-soft white circular glow to ensure text readability without hard edges */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[130%] bg-white/50 rounded-full blur-[100px] pointer-events-none z-0" />
-
                 <div className="relative z-10 flex flex-col">
                   <div className="flex items-center gap-4 mb-6">
                     <span className="h-[1px] w-8 bg-black/30" />
@@ -662,18 +721,17 @@ export default function HomePage() {
                         className={`relative overflow-hidden border border-[#111111] bg-white hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)] rounded-[20px] flex transition-all duration-500 group z-10 ${bentoClass}`}
                       >
                         {/* Background Image overlay */}
-                        <div 
-                          className="absolute right-0 bottom-0 z-0 pointer-events-none transition-transform duration-700 group-hover:scale-[1.03]" 
+                        <div
+                          className="absolute right-0 bottom-0 z-0 pointer-events-none transition-transform duration-700 group-hover:scale-[1.03]"
                           style={{ width: i === 0 || i === 1 ? '100%' : '65%', height: '100%' }}
                         >
-                          <img 
-                            src={tmpl.image} 
-                            alt={tmpl.title} 
-                            className={`w-full h-full mix-blend-multiply ${
-                              i === 0 ? 'object-contain object-right-bottom scale-[1.25] translate-x-[2%] translate-y-[10%] opacity-[0.65]' : 
-                              i === 1 ? 'object-contain object-right-bottom scale-[1.3] translate-x-[5%] translate-y-[15%] opacity-[0.65]' : 
-                              'object-contain object-bottom opacity-[0.85]'
-                            }`}
+                          <img
+                            src={tmpl.image}
+                            alt={tmpl.title}
+                            className={`w-full h-full mix-blend-multiply ${i === 0 ? 'object-contain object-right-bottom scale-[1.25] translate-x-[2%] translate-y-[10%] opacity-[0.65]' :
+                                i === 1 ? 'object-contain object-right-bottom scale-[1.3] translate-x-[5%] translate-y-[15%] opacity-[0.65]' :
+                                  'object-contain object-bottom opacity-[0.85]'
+                              }`}
                           />
                         </div>
 
@@ -683,15 +741,11 @@ export default function HomePage() {
                               <div className="w-2.5 h-2.5 bg-[#111111] group-hover:bg-[#799ee0] transition-colors duration-500 rounded-[1px]" />
                               <span className="font-mono text-xl font-medium text-black/20 tracking-wider">01</span>
                             </div>
-                            <div className="mt-auto relative z-10 max-w-[70%]">
+                            <div className="my-auto relative z-10 max-w-[70%]">
                               <span className="font-sans text-[10px] md:text-[11px] font-semibold text-black/40 tracking-wider uppercase mb-2 block">{tmpl.tag}</span>
                               <h3 className="font-sans text-3xl md:text-4xl font-medium text-[#111111] group-hover:text-[#799ee0] transition-colors duration-500 mb-3 tracking-tight">{tmpl.title}</h3>
                               <p className="font-sans text-sm md:text-base text-black/60 leading-relaxed max-w-sm">{tmpl.desc}</p>
 
-                              <div className="mt-6 pt-5 border-t border-black/5 flex items-center gap-2">
-                                <span className="font-sans text-[10px] md:text-xs font-semibold tracking-wide uppercase text-black/30 group-hover:text-[#799ee0] transition-colors duration-500">Deploy Template</span>
-                                <span className="text-black/30 group-hover:text-[#799ee0] transition-colors transform group-hover:translate-x-1 duration-500">→</span>
-                              </div>
                             </div>
                           </>
                         ) : (
@@ -760,7 +814,7 @@ export default function HomePage() {
                     </span>
                   </div>
                   <h3 className="font-sans text-4xl font-medium tracking-tight text-[#111111] cursor-default">
-                    <span ref={(el) => splitTextRef(el)}>Three Lines to Go Live</span>
+                    <span ref={(el) => splitTextRef(el)}>Lines to Go Live</span>
                   </h3>
                 </div>
 
@@ -776,12 +830,15 @@ export default function HomePage() {
                   </div>
 
                   <pre className="p-6 md:p-8 overflow-x-auto text-[14px] leading-relaxed text-white/80">
-                    <code><span className="text-white/40 italic">{"// "}Permissionless factory - any strategy, any time</span>{"\n"}
-                      <span className="text-[#c084fc]">const</span> <span className="text-[#e2e8f0]">agent</span> <span className="text-[#c084fc]">=</span> <span className="text-[#c084fc]">await</span> <span className="text-[#e2e8f0]">valdyum.</span><span className="text-[#799ee0]">deploy</span><span className="text-[#e2e8f0]">{'{'}</span>{"\n"}
-                      <span className="text-[#e2e8f0]">  template:</span> <span className="text-[#34d399]">{"\"mev_bot\""}</span><span className="text-[#e2e8f0]">,</span> <span className="text-white/40 italic">{"// "}Solana DEX</span>{"\n"}
-                      <span className="text-[#e2e8f0]">  pair:</span> <span className="text-[#34d399]">{"\"SOL/USDC\""}</span>{"\n"}
-                      <span className="text-[#e2e8f0]">{"}"});</span>{"\n\n"}
-                      <span className="text-white/40">{"->"}</span> <span className="text-[#34d399]">AgentContract</span> <span className="text-white/40">at</span> <span className="text-[#e2e8f0]">C...42E</span></code>
+                    <code>
+                      <span className="text-white/40">$</span> <span className="text-[#799ee0]">cd</span> <span className="text-[#e2e8f0]">mnt/folder/file/project</span>{"\n"}
+                      <span className="text-white/40">$</span> <span className="text-[#799ee0]">ls</span>{"\n"}
+                      <span className="text-white/40">$</span> <span className="text-[#799ee0]">cd</span> <span className="text-[#e2e8f0]">valdyum</span>{"\n"}
+                      <span className="text-white/40">$</span> <span className="text-[#34d399]">./valdyum</span> <span className="text-[#e2e8f0]">init</span>{"\n"}
+                      <span className="text-white/40">$</span> <span className="text-[#34d399]">.\valdyum</span> <span className="text-[#e2e8f0]">dashboard</span>{"\n"}
+                      <span className="text-white/40">$</span> <span className="text-[#34d399]">.\valdyum</span> <span className="text-[#c084fc]">agents:list</span>{"\n"}
+                      <span className="text-white/40">$</span> <span className="text-[#34d399]">.\valdyum</span> <span className="text-[#c084fc]">agents:status</span> <span className="text-white/60">-i</span> <span className="text-[#ffbd2e]">aa3f93ec-d3a2-4c41-b6d8-e08e97254541</span>
+                    </code>
                   </pre>
 
                   <div className="px-6 py-5 border-t border-white/5 bg-white/[0.02] flex items-center gap-4 pointer-events-auto">
@@ -1084,7 +1141,7 @@ export default function HomePage() {
               <h4 className="font-sans text-[9px] font-bold tracking-[0.2em] uppercase mb-5 border-t border-white/30 pt-4 text-white">SOCIALS</h4>
               <ul className="flex flex-col gap-2 font-sans text-xs text-white/80">
                 <li><Link href="https://x.com/ValdyumLabs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg> Twitter / X</Link></li>
-                <li><Link href="https://www.linkedin.com/company/valdyum-labs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.924 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> LinkedIn</Link></li>
+                <li><Link href="https://www.linkedin.com/company/valdyum-labs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.924 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg> LinkedIn</Link></li>
                 <li><Link href="https://discord.gg/MTWHBwgP" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-3"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0788.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z" /></svg> Discord</Link></li>
               </ul>
             </div>
@@ -1095,10 +1152,10 @@ export default function HomePage() {
           <div className="w-full lg:w-1/2 flex flex-col justify-start lg:pl-16 border-t lg:border-t-0 lg:border-l border-white/20 pt-12 lg:pt-0">
             <span className="font-sans text-[9px] font-bold tracking-[0.2em] uppercase mb-5 border-t border-white/30 pt-4 text-white">WAITLIST</span>
             <h3 className="font-sans text-4xl md:text-5xl font-medium tracking-tight text-white leading-[1.1] mb-4">
-              Be first on<br />the rate curve.
+              Be the first<br />praetorian.
             </h3>
             <p className="font-sans text-sm text-white/80 mb-8 max-w-sm">
-              Early access to the terminal, fixed-rate markets, and protocol updates.
+              Early access to the terminal and agent templates.
             </p>
 
             <form className="relative group w-full max-w-md" onSubmit={(e) => e.preventDefault()}>
