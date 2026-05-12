@@ -840,16 +840,6 @@ export default function HomePage() {
                       <span className="text-white/40">$</span> <span className="text-[#34d399]">.\valdyum</span> <span className="text-[#c084fc]">agents:status</span> <span className="text-white/60">-i</span> <span className="text-[#ffbd2e]">aa3f93ec-d3a2-4c41-b6d8-e08e97254541</span>
                     </code>
                   </pre>
-
-                  <div className="px-6 py-5 border-t border-white/5 bg-white/[0.02] flex items-center gap-4 pointer-events-auto">
-                    <Link href="/docs/sdk" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-white/40 hover:text-white transition-colors">
-                      Full SDK docs <span className="transform group-hover:translate-x-1 transition-transform">→</span>
-                    </Link>
-                    <span className="text-white/10">·</span>
-                    <Link href="/build" className="group flex items-center gap-2 font-sans text-xs font-semibold tracking-wide uppercase text-white/40 hover:text-white transition-colors">
-                      Use template <span className="transform group-hover:translate-x-1 transition-transform">→</span>
-                    </Link>
-                  </div>
                 </div>
               </div>
             </div>
