@@ -349,6 +349,7 @@ export default function HomePage() {
     let snapPoints: number[] = [];
     let h1Start = 0, h1End = 0;
     let h2Start = 0, h2End = 0;
+    let pipelineStart = 0;
 
     const calculateSnapPoints = () => {
       const maxScroll = ScrollTrigger.maxScroll(window);
@@ -370,6 +371,14 @@ export default function HomePage() {
       h2Start = s2.start / maxScroll;
       h2End = (s2.start + 5000) / maxScroll;
       s2.kill();
+
+      // Find Slide 3 (the section right before the horizontal section 2)
+      const slide3Index = sections.indexOf(container2!) - 1;
+      if (slide3Index >= 0 && sections[slide3Index]) {
+        const s3 = ScrollTrigger.create({ trigger: sections[slide3Index], start: 'top top' });
+        pipelineStart = s3.start / maxScroll;
+        s3.kill();
+      }
     };
 
     ScrollTrigger.addEventListener('refresh', calculateSnapPoints);
@@ -382,9 +391,13 @@ export default function HomePage() {
         snapTo: (progress: number) => {
           if (snapPoints.length === 0) return progress;
 
-          // Disable global snap inside or near either horizontal section (wider margin to prevent fighting)
-          if ((progress > h1Start - 0.01 && progress < h1End + 0.01) ||
-            (progress > h2Start - 0.01 && progress < h2End + 0.01)) {
+          // Disable global snap inside horizontal section 1
+          if (progress > h1Start - 0.01 && progress < h1End + 0.01) {
+            return progress;
+          }
+
+          // Disable global snap across entire pipeline region (Slide 3 through horizontal section 2)
+          if (progress > pipelineStart - 0.01 && progress < h2End + 0.01) {
             return progress;
           }
 
@@ -526,7 +539,7 @@ export default function HomePage() {
 
             {/* Full Workflow Diagram + Side Graphics */}
             <div className="w-full max-w-[1600px] mx-auto flex-1 min-h-0 flex items-center justify-center pb-4 px-4 lg:px-8 gap-4 xl:gap-8">
-              
+
               {/* Left Graphic */}
               <div className="hidden lg:flex w-1/4 max-w-[280px] h-full flex-col items-center justify-center opacity-40 hover:opacity-60 transition-all duration-500">
                 <img
@@ -565,9 +578,13 @@ export default function HomePage() {
       </section>
 
       {/* ── SLIDE 3: Workflow — Sub-pipelines (top 2) ────── */}
-      <section className="w-full min-h-[100svh] bg-gradient-to-b from-[#e6f4fa] to-[#f2fbff] flex items-center justify-center px-6 lg:px-12 py-24 relative overflow-hidden">
+      <section className="w-full bg-gradient-to-b from-[#e6f4fa] to-[#f2fbff] px-6 lg:px-12 pt-16 pb-8 relative overflow-hidden">
         {/* Background lighting */}
         <div className="absolute top-1/4 left-[-10%] w-[600px] h-[600px] bg-[#799ee0]/5 blur-[120px] rounded-full pointer-events-none" />
+
+        {/* Decorative pillars */}
+        <img src="/background/pillar1.png" alt="" className="absolute left-0 bottom-0 h-[45%] w-auto object-contain pointer-events-none opacity-25 hidden lg:block" />
+        <img src="/background/pillar1.png" alt="" className="absolute right-0 bottom-0 h-[45%] w-auto object-contain pointer-events-none opacity-25 hidden lg:block -scale-x-100" />
 
         <div className="w-full max-w-[1400px] mx-auto relative z-10">
 
@@ -577,7 +594,7 @@ export default function HomePage() {
             <span className="font-mono text-xs font-semibold text-[#799ee0] tracking-[0.2em] uppercase">Pipelines</span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12 mb-24">
 
             {/* Pipeline I: CRUD */}
             <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
@@ -616,6 +633,29 @@ export default function HomePage() {
             </div>
 
           </div>
+
+          <div className="flex justify-center w-full">
+            <div className="w-full lg:w-[48%]">
+              {/* Pipeline III: Trust Layer */}
+              <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
+                <div className="flex items-center gap-5 mb-4">
+                  <span className="font-serif text-4xl lg:text-5xl font-medium bg-gradient-to-br from-[#799ee0] to-[#4a72bc] bg-clip-text text-transparent tracking-tight">III.</span>
+                  <div>
+                    <h3 className="font-sans text-xl lg:text-2xl font-medium text-[#111111] tracking-tight">Trust Layer</h3>
+                    <p className="font-sans text-xs text-[#799ee0]/80 font-medium mt-0.5">T54 verification pipeline.</p>
+                  </div>
+                </div>
+                <p className="font-sans text-sm text-black/60 leading-relaxed mb-6 max-w-md">
+                  Agent identities verified through T54. Audits and executions are cross-referenced
+                  via clawcredit facilitator for tamper-proof trust.
+                </p>
+                <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
+                  <img src="/background/workflow/T54 trust layer pipeline.png" alt="Trust Layer Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -632,24 +672,6 @@ export default function HomePage() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
 
-                {/* Pipeline III: Trust Layer */}
-                <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
-                  <div className="flex items-center gap-5 mb-4">
-                    <span className="font-serif text-4xl lg:text-5xl font-medium bg-gradient-to-br from-[#799ee0] to-[#4a72bc] bg-clip-text text-transparent tracking-tight">III.</span>
-                    <div>
-                      <h3 className="font-sans text-xl lg:text-2xl font-medium text-[#111111] tracking-tight">Trust Layer</h3>
-                      <p className="font-sans text-xs text-[#799ee0]/80 font-medium mt-0.5">T54 verification pipeline.</p>
-                    </div>
-                  </div>
-                  <p className="font-sans text-sm text-black/60 leading-relaxed mb-6 max-w-md">
-                    Agent identities verified through T54. Audits and executions are cross-referenced
-                    via clawcredit facilitator for tamper-proof trust.
-                  </p>
-                  <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
-                    <img src="/background/workflow/T54 trust layer pipeline.png" alt="Trust Layer Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
-                  </div>
-                </div>
-
                 {/* Pipeline IV: Dev Toolkit */}
                 <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
                   <div className="flex items-center gap-5 mb-4">
@@ -665,6 +687,24 @@ export default function HomePage() {
                   </p>
                   <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
                     <img src="/background/workflow/dev toolkit pipeline.png" alt="Dev Toolkit Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
+                  </div>
+                </div>
+
+                {/* Pipeline V: 0x402 Protocol */}
+                <div className="group relative rounded-[24px] border border-white/60 bg-white/60 backdrop-blur-xl p-6 lg:p-8 transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(121,158,224,0.12)] hover:-translate-y-1">
+                  <div className="flex items-center gap-5 mb-4">
+                    <span className="font-serif text-4xl lg:text-5xl font-medium bg-gradient-to-br from-[#799ee0] to-[#4a72bc] bg-clip-text text-transparent tracking-tight">V.</span>
+                    <div>
+                      <h3 className="font-sans text-xl lg:text-2xl font-medium text-[#111111] tracking-tight">0x402 Pipeline</h3>
+                      <p className="font-sans text-xs text-[#799ee0]/80 font-medium mt-0.5">Pay-per-request billing.</p>
+                    </div>
+                  </div>
+                  <p className="font-sans text-sm text-black/60 leading-relaxed mb-6 max-w-md">
+                    HTTP 402 integration. Every agent API call automatically handles the challenge,
+                    Solana payment verification, and retry execution seamlessly.
+                  </p>
+                  <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white to-[#f2fbff]/50 border border-white p-4 shadow-inner">
+                    <img src="/background/workflow/0x402 pipeline.png" alt="0x402 Pipeline" className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.02]" style={{ imageRendering: '-webkit-optimize-contrast', transform: 'translateZ(0)' }} />
                   </div>
                 </div>
 
@@ -729,8 +769,8 @@ export default function HomePage() {
                             src={tmpl.image}
                             alt={tmpl.title}
                             className={`w-full h-full mix-blend-multiply ${i === 0 ? 'object-contain object-right-bottom scale-[1.25] translate-x-[2%] translate-y-[10%] opacity-[0.65]' :
-                                i === 1 ? 'object-contain object-right-bottom scale-[1.3] translate-x-[5%] translate-y-[15%] opacity-[0.65]' :
-                                  'object-contain object-bottom opacity-[0.85]'
+                              i === 1 ? 'object-contain object-right-bottom scale-[1.3] translate-x-[5%] translate-y-[15%] opacity-[0.65]' :
+                                'object-contain object-bottom opacity-[0.85]'
                               }`}
                           />
                         </div>
